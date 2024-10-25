@@ -13,15 +13,15 @@ import warnings
 import logging
 
 # Configure logging to file instead of console
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('pump_probe_analysis.log'),
-        logging.NullHandler()  # Prevents logging to console
-    ]
-)
-logger = logging.getLogger('PumpProbeAnalysis')
+#logging.basicConfig(
+#    level=logging.INFO,
+#    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#    handlers=[
+#        logging.FileHandler('pump_probe_analysis.log'),
+#        logging.NullHandler()  # Prevents logging to console
+#    ]
+#)
+#logger = logging.getLogger('PumpProbeAnalysis')
 
 # Suppress specific numpy warnings
 warnings.filterwarnings('ignore', category=RuntimeWarning, message='.*P-value underflow.*')
