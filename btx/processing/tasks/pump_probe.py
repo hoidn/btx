@@ -72,17 +72,21 @@ class PumpProbeAnalysis:
         min_count = self.config['pump_probe_analysis']['min_count']
         delays = input_data.load_data_output.binned_delays
         
-        # Use the unique binned delays directly - they were already properly binned in LoadData
+        # Get unique delays and create bins for grouping
         unique_delays = np.unique(delays)
         
-        
-        # Group frames by bin center
+        # Group frames by delay
         stacks_on = {}
         stacks_off = {}
         
+        # Print total number of frames before grouping
+        total_frames = len(delays)
+        print(f"Total frames before grouping: {total_frames}")
+        
+        # Process each unique delay
         for delay in unique_delays:
-            # Find frames matching this delay exactly
-            delay_mask = delays == delay
+            # Find all frames in this delay bin
+            delay_mask = (delays == delay)
             
             # Split into on/off
             on_mask = delay_mask & input_data.load_data_output.laser_on_mask
@@ -91,8 +95,6 @@ class PumpProbeAnalysis:
             n_on = np.sum(on_mask)
             n_off = np.sum(off_mask)
             
-            
-            # Only include groups with sufficient frames
             print(f"\nDelay {delay:.2f}ps:")
             print(f"  Found {n_on} ON frames and {n_off} OFF frames")
             
@@ -108,6 +110,14 @@ class PumpProbeAnalysis:
                 )
             else:
                 print(f"  ✗ Rejected (< {min_count} frames)")
+        
+        # Print summary of grouping
+        print("\nGrouping summary:")
+        print(f"Number of delay points with sufficient frames: {len(stacks_on)}")
+        if stacks_on:
+            print("Frame counts per delay point:")
+            for delay in sorted(stacks_on.keys()):
+                print(f"  {delay:.2f}ps: {len(stacks_on[delay].frames)} ON, {len(stacks_off[delay].frames)} OFF")
         
         
         if not stacks_on:
