@@ -73,7 +73,7 @@ class PumpProbeAnalysis:
         delays = input_data.load_data_output.binned_delays
         
         # Get unique delays and create bins for grouping
-        unique_delays = np.unique(delays)
+        unique_delays = np.unique(np.round(delays, decimals=1))
         
         # Group frames by delay
         stacks_on = {}
