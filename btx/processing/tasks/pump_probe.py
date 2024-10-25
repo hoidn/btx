@@ -431,7 +431,18 @@ class PumpProbeAnalysis:
             axes[2,0].legend()
             
             # QQ plot of differences
-            stats.probplot(net_signal_on - net_signal_off, dist="norm", plot=axes[2,1])
+            print(f"\nDEBUG: At delay {delay:.2f}ps:")
+            print(f"net_signal_on shape: {net_signal_on.shape}, length: {len(net_signal_on)}")
+            print(f"net_signal_off shape: {net_signal_off.shape}, length: {len(net_signal_off)}")
+            print(f"net_signal_on values: {net_signal_on}")
+            print(f"net_signal_off values: {net_signal_off}")
+            
+            if len(net_signal_on) != len(net_signal_off):
+                print(f"WARNING: Unequal lengths at delay {delay:.2f}ps!")
+                axes[2,1].text(0.5, 0.5, 'Q-Q plot unavailable\n(unequal sample sizes)',
+                             ha='center', va='center', transform=axes[2,1].transAxes)
+            else:
+                stats.probplot(net_signal_on - net_signal_off, dist="norm", plot=axes[2,1])
             axes[2,1].set_title('Q-Q Plot of Signal Differences')
             
             # Add statistical information
