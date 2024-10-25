@@ -9,7 +9,9 @@ import warnings
 from btx.processing.btx_types import (
     BuildPumpProbeMasksInput,
     BuildPumpProbeMasksOutput,
-    SignalMaskStages
+    SignalMaskStages,
+    MakeHistogramOutput,
+    CalculatePValuesOutput
 )
 
 class BuildPumpProbeMasks:
@@ -304,6 +306,26 @@ class BuildPumpProbeMasks:
                 f"target {signal_size * self.config['generate_masks']['bg_mask_mult']}",
                 RuntimeWarning
             )
+
+    def process(self, config: Dict[str, Any],
+                histogram_output: MakeHistogramOutput,
+                p_values_output: CalculatePValuesOutput) -> BuildPumpProbeMasksOutput:
+        """Process mask generation directly from inputs.
+        
+        Args:
+            config: Configuration dictionary
+            histogram_output: Output from MakeHistogram task
+            p_values_output: Output from CalculatePValues task
+            
+        Returns:
+            BuildPumpProbeMasksOutput containing signal and background masks
+        """
+        input_data = BuildPumpProbeMasksInput(
+            config=config,
+            histogram_output=histogram_output,
+            p_values_output=p_values_output
+        )
+        return self.run(input_data)
 
     def run(self, input_data: BuildPumpProbeMasksInput) -> BuildPumpProbeMasksOutput:
         """Run mask generation."""

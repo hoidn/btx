@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 from btx.processing.btx_types import (
     PumpProbeAnalysisInput,
     PumpProbeAnalysisOutput,
+    LoadDataOutput,
+    BuildPumpProbeMasksOutput
 )
 
 import warnings
@@ -31,8 +33,29 @@ class DelayData(NamedTuple):
     frames: np.ndarray
     I0: np.ndarray
 
+from pathlib import Path
+from typing import Dict, List, Tuple, Any, NamedTuple
+import numpy as np
+from scipy import stats
+import matplotlib.pyplot as plt
+import warnings
+import logging
+
+from btx.processing.btx_types import (
+    PumpProbeAnalysisInput,
+    PumpProbeAnalysisOutput,
+)
+
+# Configure logging
+logger = logging.getLogger('PumpProbeAnalysis')
+
+class DelayData(NamedTuple):
+    """Container for frames and I0 values at a specific delay."""
+    frames: np.ndarray
+    I0: np.ndarray
+
 class PumpProbeAnalysis:
-    """Analyze pump-probe time series data."""
+    """Analyze pump-probe time series data with proper error propagation."""
     
     def __init__(self, config: Dict[str, Any]):
         """Initialize pump-probe analysis task.
@@ -41,6 +64,8 @@ class PumpProbeAnalysis:
             config: Dictionary containing:
                 - pump_probe_analysis.min_count: Minimum frames per delay bin
                 - pump_probe_analysis.significance_level: P-value threshold
+                - pump_probe_analysis.Emin: Minimum energy threshold (keV)
+                - pump_probe_analysis.Emax: Maximum energy threshold (keV)
         """
         self.config = config
         
@@ -50,30 +75,64 @@ class PumpProbeAnalysis:
             
         analysis_config = self.config['pump_probe_analysis']
         if 'min_count' not in analysis_config:
-            analysis_config['min_count'] = 1
+            analysis_config['min_count'] = 2
         if 'significance_level' not in analysis_config:
             analysis_config['significance_level'] = 0.05
         if 'Emin' not in analysis_config:
-            analysis_config['Emin'] = 7.0  # keV
+            analysis_config['Emin'] = 7.0
         if 'Emax' not in analysis_config:
-            analysis_config['Emax'] = float('inf')  # keV
+            analysis_config['Emax'] = float('inf')
+
+    def _make_energy_filter(self, frames: np.ndarray) -> np.ndarray:
+        """Create energy filter mask based on config parameters.
+        
+        Args:
+            frames: Input frames to filter
+            
+        Returns:
+            Boolean mask for energy filtering
+        """
+        Emin = self.config['pump_probe_analysis']['Emin']
+        Emax = self.config['pump_probe_analysis']['Emax']
+        return (frames >= Emin) & (frames <= Emax)
 
     def _group_by_delay(
         self, 
         input_data: PumpProbeAnalysisInput
     ) -> Tuple[Dict[float, DelayData], Dict[float, DelayData]]:
-        """Group frames by delay value.
+        """Group frames by delay value with improved binning logic.
         
+        Args:
+            input_data: Input data containing delays and frames
+            
         Returns:
-            Tuple of (laser_on_groups, laser_off_groups) dictionaries mapping 
-            delays to frame data
+            Tuple of (laser_on_groups, laser_off_groups) dictionaries
         """
         print("\n=== Starting _group_by_delay ===")
         min_count = self.config['pump_probe_analysis']['min_count']
         delays = input_data.load_data_output.binned_delays
+        time_bin = float(self.config['load_data']['time_bin'])
         
-        # Get unique delays and create bins for grouping
-        unique_delays = np.unique(np.round(delays, decimals=1))
+        # Get unique delays more robustly
+        sorted_delays = np.sort(np.unique(delays))
+        logger.debug(f"Found {len(sorted_delays)} unique delay values")
+        
+        # Group delays that are within time_bin/10 of each other
+        unique_delays = []
+        current_group = [sorted_delays[0]]
+        
+        for d in sorted_delays[1:]:
+            if np.abs(d - current_group[0]) <= time_bin/10:
+                current_group.append(d)
+            else:
+                unique_delays.append(np.mean(current_group))
+                current_group = [d]
+        
+        if current_group:
+            unique_delays.append(np.mean(current_group))
+        
+        unique_delays = np.array(unique_delays)
+        logger.debug(f"Grouped into {len(unique_delays)} delay points")
         
         # Group frames by delay
         stacks_on = {}
@@ -85,13 +144,7 @@ class PumpProbeAnalysis:
         
         # Process each unique delay
         for delay in unique_delays:
-            # Find all frames in this delay bin
-            delay_mask = (delays == delay)
-            
-            # Debug info about delay mask
-            delay_indices = np.where(delay_mask)[0]
-            print(f"\nDelay {delay:.2f}ps (found in {len(delay_indices)} frames):")
-            print(f"  Delay indices: {delay_indices}")
+            delay_mask = np.isclose(delays, delay, rtol=1e-5, atol=time_bin/10)
             
             # Split into on/off
             on_mask = delay_mask & input_data.load_data_output.laser_on_mask
@@ -101,19 +154,8 @@ class PumpProbeAnalysis:
             on_indices = np.where(on_mask)[0]
             off_indices = np.where(off_mask)[0]
             
-            n_on = len(on_indices)
-            n_off = len(off_indices)
-            
-            print(f"  ON indices: {on_indices}")
-            print(f"  OFF indices: {off_indices}")
-            print(f"  Found {n_on} ON frames and {n_off} OFF frames")
-            
-            # Additional debug info about binned delays
-            if len(delay_indices) > 0:
-                print(f"  Using binned delay value: {delay:.3f}ps")
-            
             if n_on >= min_count and n_off >= min_count:
-                print(f"  ✓ Accepted (>= {min_count} frames)")
+                logger.debug(f"Delay {delay:.3f}ps: {n_on} on, {n_off} off frames")
                 stacks_on[delay] = DelayData(
                     frames=input_data.load_data_output.data[on_mask],
                     I0=input_data.load_data_output.I0[on_mask]
@@ -123,53 +165,34 @@ class PumpProbeAnalysis:
                     I0=input_data.load_data_output.I0[off_mask]
                 )
             else:
-                print(f"  ✗ Rejected (< {min_count} frames)")
-        
-        # Print summary of grouping
-        print("\nGrouping summary:")
-        print(f"Number of delay points with sufficient frames: {len(stacks_on)}")
-        if stacks_on:
-            print("Frame counts per delay point:")
-            for delay in sorted(stacks_on.keys()):
-                print(f"  {delay:.2f}ps: {len(stacks_on[delay].frames)} ON, {len(stacks_off[delay].frames)} OFF")
-        
+                logger.debug(f"Skipping delay {delay:.3f}ps: insufficient frames")
         
         if not stacks_on:
-            plt.figure(figsize=(10, 6))
-            plt.hist(delays, bins=100)
-            plt.xlabel('Delay (ps)')
-            plt.ylabel('Count')
-            plt.title('Delay Distribution - Empty Groups')
-            save_dir = Path("processing/temp/diagnostic_plots")
-            save_dir.mkdir(parents=True, exist_ok=True)
-            plt.savefig(save_dir / 'delay_distribution_empty.png')
-            plt.close()
             raise ValueError(
-                f"No delay groups met the minimum frame count requirement of {min_count}.\n"
-                f"Check delay_distribution_empty.png for diagnostics."
+                f"No delay groups met the minimum frame count requirement of {min_count}"
             )
         
         return stacks_on, stacks_off
-
-    def _make_energy_filter(self, frames: np.ndarray) -> np.ndarray:
-        """Create energy filter mask based on config parameters."""
-        Emin = self.config['pump_probe_analysis']['Emin']
-        Emax = self.config['pump_probe_analysis']['Emax']
-        
-        # Create energy window
-        energy_mask = (frames >= Emin) & (frames <= Emax)
-        return energy_mask
 
     def _calculate_signals(
         self,
         frames: np.ndarray,
         signal_mask: np.ndarray,
-        bg_mask: np.ndarray
+        bg_mask: np.ndarray,
+        I0: np.ndarray
     ) -> Tuple[float, float, float]:
-        """Calculate signal, background and total variance for a group of frames."""
-        print(f"\n=== Processing {len(frames)} frames in _calculate_signals ===")
+        """Calculate normalized signals and their uncertainties with proper error propagation.
         
-        # Apply energy filter to each frame
+        Args:
+            frames: Raw frame data
+            signal_mask: Signal region mask
+            bg_mask: Background region mask
+            I0: I0 values for each frame
+            
+        Returns:
+            Tuple of (normalized_signal, normalized_background, variance)
+        """
+        # Apply energy filter
         energy_mask = self._make_energy_filter(frames)
         n_rejected = len(frames) - np.sum(energy_mask.any(axis=(1,2)))
         print(f"Energy filter rejected {n_rejected} frames ({n_rejected/len(frames)*100:.1f}%)")
@@ -184,28 +207,72 @@ class PumpProbeAnalysis:
         scale_factor = np.sum(signal_mask) / np.sum(bg_mask)
         bg_sums *= scale_factor
         
-        # Calculate means
-        signal_mean = np.mean(signal_sums)
-        bg_mean = np.mean(bg_sums)
+        # Normalize each frame by its I0
+        norm_signal = signal_sums / I0
+        norm_bg = bg_sums / I0
         
-        # Calculate variances with detailed prints
+        # Calculate difference for each frame
+        norm_diff = norm_signal - norm_bg
+        
+        # Calculate statistics
         n_frames = len(frames)
-        signal_var = np.var(signal_sums, ddof=1) / n_frames
-        bg_var = np.var(bg_sums, ddof=1) / n_frames
+        signal_mean = np.mean(norm_signal)
+        bg_mean = np.mean(norm_bg)
         
-        return signal_mean, bg_mean, signal_var + bg_var
+        # Calculate variance of the normalized difference
+        # Using ddof=1 for unbiased variance estimate
+        variance = np.var(norm_diff, ddof=1) / n_frames  # Standard error
+        
+        return signal_mean, bg_mean, variance
+
+    def process(
+        self,
+        config: Dict[str, Any],
+        load_data_output: LoadDataOutput,
+        masks_output: BuildPumpProbeMasksOutput
+    ) -> PumpProbeAnalysisOutput:
+        """Process pump-probe analysis with raw inputs.
+        
+        Args:
+            config: Configuration dictionary
+            load_data_output: Output from LoadData task
+            masks_output: Output from BuildPumpProbeMasks task
+            
+        Returns:
+            PumpProbeAnalysisOutput with calculated signals and uncertainties
+        """
+        input_data = PumpProbeAnalysisInput(
+            config=config,
+            load_data_output=load_data_output,
+            masks_output=masks_output
+        )
+        return self.run(input_data)
 
     def run(self, input_data: PumpProbeAnalysisInput) -> PumpProbeAnalysisOutput:
-        """Run pump-probe analysis with additional error diagnostics."""
-        # Store masks and data for diagnostics
+        """Run pump-probe analysis with corrected error propagation.
+        
+        Args:
+            input_data: Input data containing frames and masks
+            
+        Returns:
+            PumpProbeAnalysisOutput with calculated signals and uncertainties
+            
+        .. deprecated:: 2.0.0
+           Use process() instead. This method will be removed in a future version.
+        """
+        import warnings
+        warnings.warn(
+            "The run() method is deprecated. Use process() instead.",
+            DeprecationWarning,
+            stacklevel=2
+        )
+        
+        # Store masks for diagnostics
         self.signal_mask = input_data.masks_output.signal_mask
         self.bg_mask = input_data.masks_output.background_mask
         
         # Group frames by delay
         self.stacks_on, self.stacks_off = self._group_by_delay(input_data)
-        
-        if not self.stacks_on:
-            raise ValueError("No delay groups met the minimum frame count requirement")
         
         # Process each delay group
         delays = []
@@ -223,30 +290,29 @@ class PumpProbeAnalysis:
             # Store frame counts
             n_frames[delay] = (len(on_data.frames), len(off_data.frames))
             
+            # Calculate signals and uncertainties
             signal_on, bg_on, var_on = self._calculate_signals(
-                on_data.frames, self.signal_mask, self.bg_mask
+                on_data.frames, self.signal_mask, self.bg_mask, on_data.I0
             )
             
             signal_off, bg_off, var_off = self._calculate_signals(
-                off_data.frames, self.signal_mask, self.bg_mask
+                off_data.frames, self.signal_mask, self.bg_mask, off_data.I0
             )
             
-            # Normalize by I0 after background subtraction
-            I0_mean_on = np.mean(on_data.I0)
-            I0_mean_off = np.mean(off_data.I0)
-            
-            norm_signal_on = (signal_on - bg_on) / I0_mean_on
-            norm_signal_off = (signal_off - bg_off) / I0_mean_off
-            
-            # Propagate errors through I0 normalization
-            std_dev_on = np.sqrt(var_on) / I0_mean_on
-            std_dev_off = np.sqrt(var_off) / I0_mean_off
-            
+            # Store results (already normalized by I0)
             delays.append(delay)
-            signals_on.append(norm_signal_on)
-            signals_off.append(norm_signal_off)
-            std_devs_on.append(std_dev_on)
-            std_devs_off.append(std_dev_off)
+            signals_on.append(signal_on - bg_on)
+            signals_off.append(signal_off - bg_off)
+            std_devs_on.append(np.sqrt(var_on))
+            std_devs_off.append(np.sqrt(var_off))
+        
+        # Calculate mean I0 values
+        mean_I0_on = np.mean([
+            np.mean(self.stacks_on[delay].I0) for delay in delays
+        ])
+        mean_I0_off = np.mean([
+            np.mean(self.stacks_off[delay].I0) for delay in delays
+        ])
         
         # Convert to arrays
         delays = np.array(delays)
@@ -255,25 +321,9 @@ class PumpProbeAnalysis:
         std_devs_on = np.array(std_devs_on)
         std_devs_off = np.array(std_devs_off)
         
-        print("\nFinal error statistics:")
-        print(f"Mean signal ON std dev: {np.mean(std_devs_on):.3f}")
-        print(f"Mean signal OFF std dev: {np.mean(std_devs_off):.3f}")
-        print(f"Relative errors ON: {np.mean(std_devs_on/np.abs(signals_on))*100:.1f}%")
-        print(f"Relative errors OFF: {np.mean(std_devs_off/np.abs(signals_off))*100:.1f}%")
-        
-        # Calculate p-values
-        p_values = self._calculate_p_values(
-            signals_on, signals_off,
-            std_devs_on, std_devs_off
-        )
-        
-        # Calculate mean I0 values across all delays
-        mean_I0_on = np.mean([
-            np.mean(self.stacks_on[delay].I0) for delay in delays
-        ])
-        mean_I0_off = np.mean([
-            np.mean(self.stacks_off[delay].I0) for delay in delays
-        ])
+        # Calculate p-values comparing on/off signals
+        z_scores = (signals_on - signals_off) / np.sqrt(std_devs_on**2 + std_devs_off**2)
+        p_values = 2 * (1 - stats.norm.cdf(np.abs(z_scores)))
         
         return PumpProbeAnalysisOutput(
             delays=delays,
@@ -287,23 +337,6 @@ class PumpProbeAnalysis:
             mean_I0_off=mean_I0_off,
             n_frames_per_delay=n_frames
         )
-    def _calculate_p_values(
-        self,
-        signals_on: np.ndarray,
-        signals_off: np.ndarray,
-        std_devs_on: np.ndarray,
-        std_devs_off: np.ndarray
-    ) -> np.ndarray:
-        """Calculate p-values comparing on/off signals using two-tailed t-test."""
-        delta_signals = signals_on - signals_off  
-        combined_stds = np.sqrt(std_devs_on**2 + std_devs_off**2)
-        z_scores = delta_signals / combined_stds
-        p_values = 2 * (1 - stats.norm.cdf(np.abs(z_scores)))
-        
-        
-        # Ensure p_values are numeric, replace any invalid values with 1.0
-        p_values = np.array([p if isinstance(p, (int, float)) else 1.0 for p in p_values])
-        return p_values
 
     def plot_diagnostics(
         self,
@@ -313,8 +346,13 @@ class PumpProbeAnalysis:
         """Generate diagnostic plots with proper infinity handling."""
         save_dir.mkdir(parents=True, exist_ok=True)
         
-        print("\n=== Starting plot_diagnostics ===")
-        print("Frame counts at plotting time:")
+        # print("\n=== Signal Shape Debug ===")
+        # print(f"signals_on shape: {output.signals_on.shape}")
+        # print(f"signals_off shape: {output.signals_off.shape}")
+        # print(f"delays: {output.delays}")
+        # print("\nFrame counts per delay:")
+        # for delay, (n_on, n_off) in output.n_frames_per_delay.items():
+        #     print(f"Delay {delay:.3f}: {n_on} on, {n_off} off")
         
         # Create four-panel overview figure
         fig = plt.figure(figsize=(16, 16))
@@ -454,20 +492,8 @@ class PumpProbeAnalysis:
             axes[2,0].set_ylabel('Count')
             axes[2,0].legend()
             
-            # QQ plot of differences
-            print(f"\nDEBUG: At delay {delay:.2f}ps:")
-            print(f"net_signal_on shape: {net_signal_on.shape}, length: {len(net_signal_on)}")
-            print(f"net_signal_off shape: {net_signal_off.shape}, length: {len(net_signal_off)}")
-            print(f"net_signal_on values: {net_signal_on}")
-            print(f"net_signal_off values: {net_signal_off}")
-            
-            if len(net_signal_on) != len(net_signal_off):
-                print(f"WARNING: Unequal lengths at delay {delay:.2f}ps!")
-                axes[2,1].text(0.5, 0.5, 'Q-Q plot unavailable\n(unequal sample sizes)',
-                             ha='center', va='center', transform=axes[2,1].transAxes)
-            else:
-                stats.probplot(net_signal_on - net_signal_off, dist="norm", plot=axes[2,1])
-            axes[2,1].set_title('Q-Q Plot of Signal Differences')
+            # Leave second subplot empty
+            axes[2,1].set_visible(False)
             
             # Add statistical information
             stats_text = (
