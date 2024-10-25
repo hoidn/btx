@@ -68,6 +68,7 @@ class PumpProbeAnalysis:
             Tuple of (laser_on_groups, laser_off_groups) dictionaries mapping 
             delays to frame data
         """
+        print("\n=== Starting _group_by_delay ===")
         min_count = self.config['pump_probe_analysis']['min_count']
         delays = input_data.load_data_output.binned_delays
         
@@ -92,7 +93,11 @@ class PumpProbeAnalysis:
             
             
             # Only include groups with sufficient frames
+            print(f"\nDelay {delay:.2f}ps:")
+            print(f"  Found {n_on} ON frames and {n_off} OFF frames")
+            
             if n_on >= min_count and n_off >= min_count:
+                print(f"  ✓ Accepted (>= {min_count} frames)")
                 stacks_on[delay] = DelayData(
                     frames=input_data.load_data_output.data[on_mask],
                     I0=input_data.load_data_output.I0[on_mask]
@@ -101,6 +106,8 @@ class PumpProbeAnalysis:
                     frames=input_data.load_data_output.data[off_mask],
                     I0=input_data.load_data_output.I0[off_mask]
                 )
+            else:
+                print(f"  ✗ Rejected (< {min_count} frames)")
         
         
         if not stacks_on:
@@ -136,8 +143,13 @@ class PumpProbeAnalysis:
         bg_mask: np.ndarray
     ) -> Tuple[float, float, float]:
         """Calculate signal, background and total variance for a group of frames."""
+        print(f"\n=== Processing {len(frames)} frames in _calculate_signals ===")
+        
         # Apply energy filter to each frame
         energy_mask = self._make_energy_filter(frames)
+        n_rejected = len(frames) - np.sum(energy_mask.any(axis=(1,2)))
+        print(f"Energy filter rejected {n_rejected} frames ({n_rejected/len(frames)*100:.1f}%)")
+        
         filtered_frames = frames * energy_mask
         
         # Calculate per-frame sums
@@ -276,6 +288,9 @@ class PumpProbeAnalysis:
     ) -> None:
         """Generate diagnostic plots with proper infinity handling."""
         save_dir.mkdir(parents=True, exist_ok=True)
+        
+        print("\n=== Starting plot_diagnostics ===")
+        print("Frame counts at plotting time:")
         
         # Create four-panel overview figure
         fig = plt.figure(figsize=(16, 16))
