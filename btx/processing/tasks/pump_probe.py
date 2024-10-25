@@ -108,10 +108,9 @@ class PumpProbeAnalysis:
             print(f"  OFF indices: {off_indices}")
             print(f"  Found {n_on} ON frames and {n_off} OFF frames")
             
-            # Additional debug info about the actual delay values
+            # Additional debug info about binned delays
             if len(delay_indices) > 0:
-                actual_delays = input_data.load_data_output.delays[delay_indices]
-                print(f"  Actual delay values: {actual_delays}")
+                print(f"  Using binned delay value: {delay:.3f}ps")
             
             if n_on >= min_count and n_off >= min_count:
                 print(f"  ✓ Accepted (>= {min_count} frames)")

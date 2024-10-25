@@ -60,16 +60,14 @@ class LoadData:
         delay_min = np.floor(valid_delays.min())
         delay_max = np.ceil(valid_delays.max())
         
-        # Create bins
-        half_bin = time_bin / 2
-        bins = np.arange(delay_min - half_bin, delay_max + time_bin, time_bin)
+        # Create bins centered on multiples of time_bin
+        bins = np.arange(delay_min, delay_max + time_bin, time_bin)
+        bin_centers = (bins[:-1] + bins[1:]) / 2
         
-        # Bin the delays
-        binned_indices = np.digitize(raw_delays, bins, right=True)
-        binned_delays = bins[binned_indices - 1] + half_bin
-        
-        # Clip to valid range
-        binned_delays = np.clip(binned_delays, delay_min, delay_max)
+        # Bin the delays using searchsorted
+        indices = np.searchsorted(bins, raw_delays) - 1
+        indices = np.clip(indices, 0, len(bin_centers) - 1)
+        binned_delays = bin_centers[indices]
         
         return binned_delays
 
