@@ -88,15 +88,30 @@ class PumpProbeAnalysis:
             # Find all frames in this delay bin
             delay_mask = (delays == delay)
             
+            # Debug info about delay mask
+            delay_indices = np.where(delay_mask)[0]
+            print(f"\nDelay {delay:.2f}ps (found in {len(delay_indices)} frames):")
+            print(f"  Delay indices: {delay_indices}")
+            
             # Split into on/off
             on_mask = delay_mask & input_data.load_data_output.laser_on_mask
             off_mask = delay_mask & input_data.load_data_output.laser_off_mask
             
-            n_on = np.sum(on_mask)
-            n_off = np.sum(off_mask)
+            # Debug info about laser masks
+            on_indices = np.where(on_mask)[0]
+            off_indices = np.where(off_mask)[0]
             
-            print(f"\nDelay {delay:.2f}ps:")
+            n_on = len(on_indices)
+            n_off = len(off_indices)
+            
+            print(f"  ON indices: {on_indices}")
+            print(f"  OFF indices: {off_indices}")
             print(f"  Found {n_on} ON frames and {n_off} OFF frames")
+            
+            # Additional debug info about the actual delay values
+            if len(delay_indices) > 0:
+                actual_delays = input_data.load_data_output.delays[delay_indices]
+                print(f"  Actual delay values: {actual_delays}")
             
             if n_on >= min_count and n_off >= min_count:
                 print(f"  ✓ Accepted (>= {min_count} frames)")
