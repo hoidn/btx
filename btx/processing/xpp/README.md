@@ -150,7 +150,7 @@ results = analysis.process(
 
 ## Pipeline Components
 
-The BTX pipeline consists of the following stages, connected as shown below:
+The pump-probe diffraction analysis pipeline consists of the following stages, connected as shown below:
 
 ```
             LoadData
