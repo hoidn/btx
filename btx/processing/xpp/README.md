@@ -5,7 +5,7 @@
 
 ## Overview
 
-This is a Python framework for analyzing X-ray Pump-Probe experimental data at light source facilities. It provides a pipeline for processing, analyzing, and validating experimental results using histogram-based signal analysis and Earth Mover's Distance (EMD) calculations.
+The purpose of this package is to do signal detection, statistical testing, and end-to-end analysis of time series datasets collected from X ray pump-probe experiments at the LCLS.
 
 ## Key Features
 
