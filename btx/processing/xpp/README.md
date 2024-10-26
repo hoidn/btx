@@ -76,77 +76,8 @@ config = {
         'Emax': float('inf')           # Maximum energy threshold (keV)
     }
 }
-
-# Setup output directory for results and diagnostics
-output_dir = Path("pipeline_results")
-output_dir.mkdir(exist_ok=True)
-diagnostics_dir = output_dir / "diagnostics"
-diagnostics_dir.mkdir(exist_ok=True)
 ```
 
-### Loading and Processing Data
-
-```python
-# Load and process data
-def load_pump_probe_data(npz_path, roi, config):
-    """Load and preprocess pump-probe data."""
-    with np.load(npz_path) as data:
-        frames = data['frames'][:, roi[2]:roi[3], roi[0]:roi[1]]
-        
-        loader = LoadData(config)
-        return loader.process(
-            config=config,
-            data=frames,
-            I0=data['I0'],
-            laser_delays=data['delays'],
-            laser_on_mask=data['laser_on_mask'],
-            laser_off_mask=data['laser_off_mask']
-        )
-
-# Process through pipeline
-load_data_output = load_pump_probe_data(
-    'path/to/your/data.npz',
-    roi=config['load_data']['roi'],
-    config=config
-)
-
-# Generate histograms
-histogram = MakeHistogram(config)
-histogram_output = histogram.process(
-    config=config,
-    load_data_output=load_data_output
-)
-
-# Calculate Earth Mover's Distance
-emd = MeasureEMD(config)
-emd_output = emd.process(
-    config=config,
-    histogram_output=histogram_output
-)
-
-# Calculate statistical significance
-pvals = CalculatePValues(config)
-pvals_output = pvals.process(
-    config=config,
-    emd_output=emd_output
-)
-
-# Generate analysis masks
-masks = BuildPumpProbeMasks(config)
-masks_output = masks.process(
-    config=config,
-    histogram_output=histogram_output,
-    p_values_output=pvals_output
-)
-
-# Perform pump-probe analysis
-analysis = PumpProbeAnalysis(config)
-results = analysis.process(
-    config=config,
-    load_data_output=load_data_output,
-    masks_output=masks_output
-)
-```
 
 ## Pipeline Components
 
@@ -213,6 +144,76 @@ BuildPumpProbeMasks  |
      - Delay-based grouping
      - Signal calculation
      - Error propagation
+
+### Code example
+
+```python
+# Setup output directory for results and diagnostics
+output_dir = Path("pipeline_results")
+output_dir.mkdir(exist_ok=True)
+diagnostics_dir = output_dir / "diagnostics"
+diagnostics_dir.mkdir(exist_ok=True)
+
+# Load and process data
+def load_pump_probe_data(npz_path, roi, config):
+    """Load and preprocess pump-probe data."""
+    with np.load(npz_path) as data:
+        frames = data['frames'][:, roi[2]:roi[3], roi[0]:roi[1]]
+        
+        loader = LoadData(config)
+        return loader.process(
+            config=config,
+            data=frames,
+            I0=data['I0'],
+            laser_delays=data['delays'],
+            laser_on_mask=data['laser_on_mask'],
+            laser_off_mask=data['laser_off_mask']
+        )
+
+# Process through pipeline
+load_data_output = load_pump_probe_data(
+    'path/to/your/data.npz',
+    roi=config['load_data']['roi'],
+    config=config
+)
+
+# Generate histograms
+histogram = MakeHistogram(config)
+histogram_output = histogram.process(
+    config=config,
+    load_data_output=load_data_output
+)
+
+# Calculate Earth Mover's Distance
+emd = MeasureEMD(config)
+emd_output = emd.process(
+    config=config,
+    histogram_output=histogram_output
+)
+
+# Calculate statistical significance
+pvals = CalculatePValues(config)
+pvals_output = pvals.process(
+    config=config,
+    emd_output=emd_output
+)
+
+# Generate analysis masks
+masks = BuildPumpProbeMasks(config)
+masks_output = masks.process(
+    config=config,
+    histogram_output=histogram_output,
+    p_values_output=pvals_output
+)
+
+# Perform pump-probe analysis
+analysis = PumpProbeAnalysis(config)
+results = analysis.process(
+    config=config,
+    load_data_output=load_data_output,
+    masks_output=masks_output
+)
+```
 
 ## Requirements
 
