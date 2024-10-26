@@ -153,26 +153,38 @@ results = analysis.process(
 The BTX pipeline consists of the following stages, connected as shown below:
 
 ```
-                       LoadData
-                     /          \
-                    /            \
-                   /              \
-                  v               v
-            MakeHistogram    
-                /    \           |
-               /      \          |
-              v        \         |
-         MeasureEMD     \       |
-              |          \      |
-              v           \     |
-      CalculatePValues    \    |
-              |            \   |
-              v             v  v
-         BuildPumpProbeMasks   |
-                    \          |
-                     \         |
-                      v        v
-                  PumpProbeAnalysis
+                       ┌─────────┐
+                       │ LoadData│
+                       └──┬───┬──┘
+                          │   │
+                     ┌────┘   └──────┐
+                     │               │
+                     ▼               │
+              ┌────────────┐         │
+              │MakeHistogram│         │
+              └──┬─────┬───┘         │
+                 │     │             │
+            ┌────┘     └─────┐       │
+            │                │       │
+            ▼                │       │
+     ┌───────────┐          │       │
+     │MeasureEMD │          │       │
+     └─────┬─────┘          │       │
+           │                │       │
+           ▼                │       │
+  ┌──────────────┐         │       │
+  │CalculatePVals│         │       │
+  └──────┬───────┘         │       │
+         │                 │       │
+         ▼                 ▼       ▼
+   ┌───────────────────────────────┐
+   │    BuildPumpProbeMasks        │
+   └──────────────┬────────────────┘
+                  │
+                  ▼
+   ┌───────────────────────────────┐
+   │     PumpProbeAnalysis         │
+   └───────────────────────────────┘
 ```
 
 1. **Data Loading** (`LoadData`)
