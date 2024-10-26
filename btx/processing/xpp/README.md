@@ -50,6 +50,7 @@ config = {
     'load_data': {
         'roi': (170, 250, 135, 215),  # Region of interest for processing
         'energy_filter': [9.0, 5.0],   # Energy filtering parameters
+        'i0_threshold': 0,             # Minimum I0 value
         'time_bin': 2.0,               # Time binning in ps
         'time_tool': [0.0, 0.015]      # TimeTool parameters
     },
@@ -57,17 +58,22 @@ config = {
         'bin_boundaries': np.arange(5, 30, 0.2),
         'hist_start_bin': 1
     },
+    'calculate_emd': {
+        'num_permutations': 1000       # Number of permutations for null distribution
+    },
     'calculate_pvalues': {
-        'significance_threshold': 0.05
+        'significance_threshold': 0.05  # P-value threshold for significance
     },
     'generate_masks': {
-        'threshold': 0.05,
-        'bg_mask_mult': 2.0,
-        'bg_mask_thickness': 5
+        'threshold': 0.05,             # P-value threshold for mask generation
+        'bg_mask_mult': 2.0,           # Background mask size multiplier
+        'bg_mask_thickness': 5         # Background mask thickness in pixels
     },
     'pump_probe_analysis': {
-        'min_count': 2,
-        'significance_level': 0.05
+        'min_count': 2,                # Minimum frames per delay bin
+        'significance_level': 0.05,     # P-value threshold for significance
+        'Emin': 7.0,                   # Minimum energy threshold (keV)
+        'Emax': float('inf')           # Maximum energy threshold (keV)
     }
 }
 
@@ -81,25 +87,24 @@ diagnostics_dir.mkdir(exist_ok=True)
 ### Loading and Processing Data
 
 ```python
-# Load data from NPZ file
-from btx.processing.btx_types import LoadDataInput
-
+# Load and process data
 def load_pump_probe_data(npz_path, roi, config):
     """Load and preprocess pump-probe data."""
     with np.load(npz_path) as data:
         frames = data['frames'][:, roi[2]:roi[3], roi[0]:roi[1]]
         
-        return LoadData(config).run(LoadDataInput(
+        loader = LoadData(config)
+        return loader.process(
             config=config,
             data=frames,
             I0=data['I0'],
             laser_delays=data['delays'],
             laser_on_mask=data['laser_on_mask'],
             laser_off_mask=data['laser_off_mask']
-        ))
+        )
 
 # Process through pipeline
-load_data_output, _ = load_pump_probe_data(
+load_data_output = load_pump_probe_data(
     'path/to/your/data.npz',
     roi=config['load_data']['roi'],
     config=config
@@ -107,40 +112,40 @@ load_data_output, _ = load_pump_probe_data(
 
 # Generate histograms
 histogram = MakeHistogram(config)
-histogram_output = histogram.run(MakeHistogramInput(
+histogram_output = histogram.process(
     config=config,
     load_data_output=load_data_output
-))
+)
 
 # Calculate Earth Mover's Distance
 emd = MeasureEMD(config)
-emd_output = emd.run(MeasureEMDInput(
+emd_output = emd.process(
     config=config,
     histogram_output=histogram_output
-))
+)
 
 # Calculate statistical significance
 pvals = CalculatePValues(config)
-pvals_output = pvals.run(CalculatePValuesInput(
+pvals_output = pvals.process(
     config=config,
     emd_output=emd_output
-))
+)
 
 # Generate analysis masks
 masks = BuildPumpProbeMasks(config)
-masks_output = masks.run(BuildPumpProbeMasksInput(
+masks_output = masks.process(
     config=config,
     histogram_output=histogram_output,
     p_values_output=pvals_output
-))
+)
 
 # Perform pump-probe analysis
 analysis = PumpProbeAnalysis(config)
-results = analysis.run(PumpProbeAnalysisInput(
+results = analysis.process(
     config=config,
     load_data_output=load_data_output,
     masks_output=masks_output
-))
+)
 ```
 
 ## Pipeline Components
@@ -186,6 +191,24 @@ The BTX pipeline consists of the following stages:
 - Numba
 - H5py
 - PyTables
+
+## Note on API Changes
+
+As of version 2.0.0, the preferred way to use the pipeline components is through their `process()` methods, which accept raw inputs directly. The older `run()` methods that accept input objects are deprecated and will be removed in a future version.
+
+Example of old style (deprecated):
+```python
+histogram_input = MakeHistogramInput(config=config, load_data_output=load_data_output)
+histogram_output = histogram.run(histogram_input)
+```
+
+Example of new style (preferred):
+```python
+histogram_output = histogram.process(
+    config=config,
+    load_data_output=load_data_output
+)
+```
 
 ## Future Work
 
