@@ -224,24 +224,6 @@ BuildPumpProbeMasks  |
 - H5py
 - PyTables
 
-## Note on API Changes
-
-As of version 2.0.0, the preferred way to use the pipeline components is through their `process()` methods, which accept raw inputs directly. The older `run()` methods that accept input objects are deprecated and will be removed in a future version.
-
-Example of old style (deprecated):
-```python
-histogram_input = MakeHistogramInput(config=config, load_data_output=load_data_output)
-histogram_output = histogram.run(histogram_input)
-```
-
-Example of new style (preferred):
-```python
-histogram_output = histogram.process(
-    config=config,
-    load_data_output=load_data_output
-)
-```
-
 ## Future Work
 
 ### File I/O Standardization
