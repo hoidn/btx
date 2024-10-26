@@ -150,7 +150,30 @@ results = analysis.process(
 
 ## Pipeline Components
 
-The BTX pipeline consists of the following stages:
+The BTX pipeline consists of the following stages, connected as shown below:
+
+```
+                       LoadData
+                     /          \
+                    /            \
+                   /              \
+                  v               v
+            MakeHistogram    
+                /    \           |
+               /      \          |
+              v        \         |
+         MeasureEMD     \       |
+              |          \      |
+              v           \     |
+      CalculatePValues    \    |
+              |            \   |
+              v             v  v
+         BuildPumpProbeMasks   |
+                    \          |
+                     \         |
+                      v        v
+                  PumpProbeAnalysis
+```
 
 1. **Data Loading** (`LoadData`)
    - Raw data ingestion
