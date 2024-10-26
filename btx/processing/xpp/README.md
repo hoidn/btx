@@ -186,3 +186,45 @@ The BTX pipeline consists of the following stages:
 - Numba
 - H5py
 - PyTables
+
+## Future Work
+
+### File I/O Standardization
+
+We might implement a standardized file organization system for task inputs and outputs. Each pipeline stage will follow consistent conventions for data storage and retrieval:
+
+```
+output_dir/
+├── load_data/
+│   └── {exp}_{run}/
+│       └── {exp}_run{run}_data.npz
+├── make_histogram/
+│   └── {exp}_{run}/
+│       └── histograms.npy
+├── measure_emd/
+│   └── {exp}_{run}/
+│       ├── emd_values.npy
+│       └── emd_null_dist.npy
+├── calculate_p_values/
+│   └── {exp}_{run}/
+│       └── p_values.npy
+├── build_pump_probe_masks/
+│   └── {exp}_{run}/
+│       ├── signal_mask.npy
+│       └── bg_mask.npy
+└── pump_probe_analysis/
+    └── {exp}_{run}/
+        └── pump_probe_curves.npz
+```
+
+#### Planned Improvements
+
+1. **File Manager Interface**
+   - Implement a centralized FileManager class to handle all I/O operations
+   - Standardize path generation and file access across tasks
+   - Add validation for file existence and data integrity
+
+2. **Consistent Metadata**
+   - Include metadata in saved files (timestamps, configuration parameters, etc.)
+   - Implement versioning for data formats
+   - Add checksums for data validation
