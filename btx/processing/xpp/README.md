@@ -167,34 +167,52 @@ BuildPumpProbeMasks  |
 ```
 
 1. **Data Loading** (`LoadData`)
-   - Raw data ingestion
-   - Preprocessing
-   - Initial validation
+   - Input: Raw experimental data (frames, I0 values, laser delays, masks)
+   - Output: Preprocessed data array, binned delays, validated masks
+   - Key operations:
+     - Raw data ingestion
+     - Preprocessing
+     - Initial validation
 
 2. **Histogram Generation** (`MakeHistogram`)
-   - Numba-optimized computation
-   - Configurable binning
-   - Memoization
+   - Input: LoadData output (frames and metadata)
+   - Output: Per-pixel histograms, bin edges, bin centers
+   - Key operations:
+     - Numba-optimized computation
+     - Configurable binning
+     - Memoization
 
 3. **EMD Calculation** (`MeasureEMD`)
-   - Background ROI validation
-   - Wasserstein distance computation
-   - Null distribution generation
+   - Input: MakeHistogram output (histograms and bin information)
+   - Output: EMD values per pixel, null distribution
+   - Key operations:
+     - Background ROI validation
+     - Wasserstein distance computation
+     - Null distribution generation
 
 4. **Statistical Analysis** (`CalculatePValues`)
-   - P-value calculation
-   - Multiple testing correction
-   - Significance thresholding
+   - Input: MeasureEMD output (EMD values and null distribution)
+   - Output: P-values and log-transformed p-values
+   - Key operations:
+     - P-value calculation
+     - Multiple testing correction
+     - Significance thresholding
 
 5. **Mask Generation** (`BuildPumpProbeMasks`)
-   - ROI-connected clustering
-   - Buffer zone generation
-   - Quality validation
+   - Input: MakeHistogram output and CalculatePValues output
+   - Output: Signal mask, background mask, intermediate mask stages
+   - Key operations:
+     - ROI-connected clustering
+     - Buffer zone generation
+     - Quality validation
 
 6. **Time Series Analysis** (`PumpProbeAnalysis`)
-   - Delay-based grouping
-   - Signal calculation
-   - Error propagation
+   - Input: LoadData output and BuildPumpProbeMasks output
+   - Output: Time-dependent signals, uncertainties, frame statistics
+   - Key operations:
+     - Delay-based grouping
+     - Signal calculation
+     - Error propagation
 
 ## Requirements
 
