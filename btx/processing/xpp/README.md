@@ -153,38 +153,17 @@ results = analysis.process(
 The BTX pipeline consists of the following stages, connected as shown below:
 
 ```
-                       ┌─────────┐
-                       │ LoadData│
-                       └──┬───┬──┘
-                          │   │
-                     ┌────┘   └──────┐
-                     │               │
-                     ▼               │
-              ┌────────────┐         │
-              │MakeHistogram│         │
-              └──┬─────┬───┘         │
-                 │     │             │
-            ┌────┘     └─────┐       │
-            │                │       │
-            ▼                │       │
-     ┌───────────┐          │       │
-     │MeasureEMD │          │       │
-     └─────┬─────┘          │       │
-           │                │       │
-           ▼                │       │
-  ┌──────────────┐         │       │
-  │CalculatePVals│         │       │
-  └──────┬───────┘         │       │
-         │                 │       │
-         ▼                 ▼       ▼
-   ┌───────────────────────────────┐
-   │    BuildPumpProbeMasks        │
-   └──────────────┬────────────────┘
-                  │
-                  ▼
-   ┌───────────────────────────────┐
-   │     PumpProbeAnalysis         │
-   └───────────────────────────────┘
+            LoadData
+            /      \
+   MakeHistogram   \
+       /    \       \
+MeasureEMD  |       \
+     |      |        \
+CalculatePValues     |
+     \      /        |
+BuildPumpProbeMasks  |
+           \         |
+          PumpProbeAnalysis
 ```
 
 1. **Data Loading** (`LoadData`)
