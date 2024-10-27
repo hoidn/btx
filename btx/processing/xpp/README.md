@@ -96,7 +96,7 @@ BuildPumpProbeMasks  |
            \         |
           PumpProbeAnalysis
 ```
-Why this structure? First, it allows caching and visual inspection of intermediate results. If we want to run an optimization loop with respect to input (configuration) parameters of the signal-finding task, for example, it is necessary to memoize CalculatePValues or its expensive upstream tasks. (The actual current behavior is that MakeHistogram, the most expensive step, is memoized by default.) 
+Why this structure? First, it allows caching and visual inspection of intermediate results. If we want to run an optimization loop with respect to input (configuration) parameters of the signal-finding task, for example, it is necessary to memoize CalculatePValues or its expensive predecessor tasks. (The actual current behavior is that MakeHistogram, the most expensive step, is memoized by default.) 
 
 We *could* do these things while black boxing the entire pipeline, but exposing the intermediate steps as a DAG - with explicit inputs, outputs and visual monitoring for each component - gives the user more clarity and control over what is going on. 
 
