@@ -68,9 +68,9 @@ config = {
         'background_roi_coords': [0, 15, 0, 40]
     },
     'load_data': {
-        'roi': (170, 250, 135, 215),  # Moved from function call to config
+        'roi': (130, 290, 95, 340), 
         'energy_filter': [9.0, 5.0],
-        'i0_threshold': 0,
+        'i0_threshold': 1500,
         'time_bin': 2.0,
         'time_tool': [0.0, 0.015]
     },
@@ -90,8 +90,10 @@ config = {
         'bg_mask_thickness': 5
     },
     'pump_probe_analysis': {
-        'min_count': 2,
-        'significance_level': 0.05
+        'min_count': 2,                # Minimum frames per delay bin
+        'significance_level': 0.05,     # P-value threshold for significance
+        'Emin': 9.0,                   # Minimum energy threshold (keV)
+        'Emax': float('inf')           # Maximum energy threshold (keV)
     }
 }
 

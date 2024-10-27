@@ -69,6 +69,7 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
         print("Loading detector frames...")
         roi0_mask = h5[data_paths['roi0_mask']][0]
         frames = h5[data_paths['roi0']][:] * np.logical_not(roi0_mask)
+        #print('smalldata shape:', frames.shape)
         
         # Save to npz
         output_path = Path(output_dir)
