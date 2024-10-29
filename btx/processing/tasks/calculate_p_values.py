@@ -21,7 +21,6 @@ class CalculatePValues:
         # Set defaults
         if 'calculate_pvalues' not in self.config:
             self.config['calculate_pvalues'] = {}
-        # TODO  significance_threshold is an undded param and should be removed
         if 'significance_threshold' not in self.config['calculate_pvalues']:
             self.config['calculate_pvalues']['significance_threshold'] = 0.05
 

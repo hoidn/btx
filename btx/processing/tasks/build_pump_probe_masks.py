@@ -415,20 +415,7 @@ class BuildPumpProbeMasks:
             plt.savefig(save_dir / 'mask_generation_stages.png')
             plt.close()
             
-            # 2. Plot final masks
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-            
-            ax1.imshow(output.signal_mask)
-            ax1.set_title('Signal Mask')
-            
-            ax2.imshow(output.background_mask)
-            ax2.set_title('Background Mask')
-            
-            plt.tight_layout()
-            plt.savefig(save_dir / 'final_masks.png')
-            plt.close()
-            
-            # 3. Plot distance transform
+            # 2. Plot distance transform
             fig, ax = plt.subplots(figsize=(8, 8))
             
             # Calculate distance from signal mask
