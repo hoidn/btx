@@ -26,10 +26,10 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
     
     # Define filters
     filters = {
-        'i0': [1500, 20000],           # Intensity filter
-        'xpos': [-0.25, 0.45],         # X position
-        'ypos': [-0.6, 0.8],           # Y position
-        'tt_amp': [0.015, np.inf],     # Time tool amplitude
+        'i0': [200, 20000],           # Intensity filter
+        'xpos': [-0.45, 0.45],         # X position
+        'ypos': [-1.6, 0.],           # Y position
+        'tt_amp': [0.0, np.inf],     # Time tool amplitude
     }
     
     print("Opening h5 file...")
@@ -93,6 +93,6 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
         print("Extraction complete!")
         return save_path
 
-filename = "xppl1030522_Run0190.h5"
-output_dir = "processed_data"
+filename = "/sdf/data/lcls/ds/xpp/xppx1003221/hdf5/smalldata/xppx1003221_Run0195.h5"
+output_dir = "processed_xppx1003221"
 extract_data_from_h5(filename, output_dir)

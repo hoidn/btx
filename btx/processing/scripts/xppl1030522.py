@@ -65,10 +65,10 @@ config = {
     'setup': {
         'run': 190,
         'exp': 'xppl1030522',
-        'background_roi_coords': [0, 15, 0, 40]
+        'background_roi_coords': [50, 100, 0, 200]
     },
     'load_data': {
-        'roi': (130, 290, 95, 340), 
+        'roi': [5,105,50,250], 
         'energy_filter': [9.0, 5.0],
         'i0_threshold': 1500,
         'time_bin': 2.0,
@@ -104,7 +104,7 @@ diagnostics_dir = output_dir / "diagnostics"
 diagnostics_dir.mkdir(exist_ok=True)
 
 # Load and process data
-npz_path = '/sdf/data/lcls/ds/xpp/xppx1003221/results/ohoidn/Shift 4/processed_data/run0190_extracted.npz'
+npz_path = '/sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/processed_xppx1003221/run0195_extracted.npz'
 load_data_output, frames = load_pump_probe_data(
     npz_path,
     roi=config['load_data']['roi'],
