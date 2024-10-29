@@ -42,6 +42,8 @@ def load_pump_probe_data(
     # Apply ROI cropping
     x1, x2, y1, y2 = roi
     print('roi', roi)
+    fullframes = frames
+    # TODO should swap the coordinate order for consistency with previous versions
     frames = frames[:, y1:y2, x1:x2]
     
     # Create LoadDataInput
@@ -58,7 +60,7 @@ def load_pump_probe_data(
     loader = LoadData(config)
     load_data_output = loader.run(input_data)
     
-    return load_data_output, frames
+    return load_data_output, fullframes
 
 # Configuration
 config = {
@@ -66,10 +68,11 @@ config = {
         'run': 190,
         'exp': 'xppl1030522',
         # different coordinate convention, had to swap
-        'background_roi_coords': [0, 200, 50, 100]
+        'background_roi_coords': [0, 70, 0, 200]
     },
     'load_data': {
-        'roi': [5,105,50,250], 
+        'roi': [10, 250, 10, 200], 
+        #'roi': [5,105,50,250], 
         'energy_filter': [9.0, 5.0],
         'i0_threshold': 1500,
         'time_bin': 2.0,
@@ -83,18 +86,17 @@ config = {
         'num_permutations': 1000
     },
     'calculate_pvalues': {
-        'significance_threshold': 0.05
     },
     'generate_masks': {
-        'threshold': 0.05,
-        'bg_mask_mult': 2.0,
+        'threshold': 0.15,
+        'bg_mask_mult': 4.0,
         'bg_mask_thickness': 5
     },
     'pump_probe_analysis': {
         'min_count': 2,                # Minimum frames per delay bin
         'significance_level': 0.05,     # P-value threshold for significance
-        'Emin': 9.0,                   # Minimum energy threshold (keV)
-        'Emax': float('inf')           # Maximum energy threshold (keV)
+        'Emin': 5.0,                   # Minimum energy threshold (keV)
+        'Emax': 10.           # Maximum energy threshold (keV)
     }
 }
 

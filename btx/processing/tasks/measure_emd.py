@@ -55,6 +55,7 @@ class MeasureEMD:
         y2: int
     ) -> np.ndarray:
         """Calculate average histogram for ROI."""
+        # TODO would median be better? should probably plot both
         roi_histograms = histograms[:, x1:x2, y1:y2]
         return np.mean(roi_histograms, axis=(1, 2))
         
