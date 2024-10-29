@@ -65,7 +65,8 @@ config = {
     'setup': {
         'run': 190,
         'exp': 'xppl1030522',
-        'background_roi_coords': [50, 100, 0, 200]
+        # different coordinate convention, had to swap
+        'background_roi_coords': [0, 200, 50, 100]
     },
     'load_data': {
         'roi': [5,105,50,250], 

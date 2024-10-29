@@ -1,39 +1,68 @@
-# extract_h5_data.py
 import h5py
 import numpy as np
 from pathlib import Path
+from typing import Dict, Any, Tuple
 
-def extract_data_from_h5(filename: str, output_dir: str) -> None:
+def calculate_delays(h5file: h5py.File) -> np.ndarray:
+    """
+    Calculate delays correctly from encoder and timetool data.
+    
+    Args:
+        h5file: Open h5py File object
+        
+    Returns:
+        np.ndarray: Corrected delay values
+    """
+    # Get encoder delays - note using lasDelay not lasDelay2
+    enc_delays = h5file['enc/lasDelay'][:]
+    
+    # Get TimeTool corrections
+    tt_corrections = h5file['tt/FLTPOS_PS'][:]
+    
+    # Calculate full delays with TimeTool correction
+    delays = enc_delays + tt_corrections
+    
+    return delays
+
+def extract_data_from_h5(filename: str, output_dir: str) -> Path:
     """
     Extract data from h5 file and save to npz.
     
     Args:
         filename: Path to h5 file
         output_dir: Directory to save npz file
+        
+    Returns:
+        Path: Path to saved npz file
     """
     # Path mappings in h5 file
     data_paths = {
-        'scanvar': 'enc/lasDelay2',    # Delay values
-        'i0': 'ipm2/sum',              # I0 intensity
+        'enc_delay': 'enc/lasDelay',    # Encoder delay values
+        'tt_delay': 'tt/FLTPOS_PS',     # TimeTool correction
+        'i0': 'ipm2/sum',               # I0 intensity
         'roi0': 'jungfrau1M/ROI_0_area',  # Raw frames
         'roi0_mask': 'UserDataCfg/jungfrau1M/ROI_0__ROI_0_mask',
-        'xon': 'lightStatus/xray',     # X-ray status
-        'lon': 'lightStatus/laser',    # Laser status
-        'tt_amp': 'tt/AMPL',           # Time tool amplitude
-        'xpos': 'ipm2/xpos',           # Beam position
+        'xon': 'lightStatus/xray',      # X-ray status
+        'lon': 'lightStatus/laser',     # Laser status
+        'tt_amp': 'tt/AMPL',            # Time tool amplitude
+        'xpos': 'ipm2/xpos',            # Beam position
         'ypos': 'ipm2/ypos'
     }
     
     # Define filters
     filters = {
-        'i0': [200, 20000],           # Intensity filter
+        'i0': [200, 20000],            # Intensity filter
         'xpos': [-0.45, 0.45],         # X position
-        'ypos': [-1.6, 0.],           # Y position
-        'tt_amp': [0.0, np.inf],     # Time tool amplitude
+        'ypos': [-1.6, 0.],            # Y position
+        'tt_amp': [0.0, np.inf],       # Time tool amplitude
     }
     
     print("Opening h5 file...")
     with h5py.File(filename, 'r') as h5:
+        # Calculate delays correctly
+        print("Calculating delays...")
+        delays = calculate_delays(h5)
+        
         # 1. Get base masks
         print("Creating base masks...")
         xray_on = h5[data_paths['xon']][:]
@@ -55,27 +84,26 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
             if 'tt' not in key:  # Don't apply time tool filters to laser off
                 laser_off_mask = np.logical_and(laser_off_mask, value_filter)
         
+        # Also filter out NaN delays
+        valid_delays = ~np.isnan(delays)
+        laser_on_mask = np.logical_and(laser_on_mask, valid_delays)
+        laser_off_mask = np.logical_and(laser_off_mask, valid_delays)
+        
         print(f"After filtering: {np.sum(laser_on_mask)} laser-on shots, {np.sum(laser_off_mask)} laser-off shots")
         
-        # 3. Get delay values
-        print("Getting delay values...")
-        delays = h5[data_paths['scanvar']][:]
-        
-        # 4. Get I0 values
+        # Get other data
         print("Getting I0 values...")
         i0 = h5[data_paths['i0']][:]
         
-        # 5. Get detector frames
         print("Loading detector frames...")
         roi0_mask = h5[data_paths['roi0_mask']][0]
         frames = h5[data_paths['roi0']][:] * np.logical_not(roi0_mask)
-        #print('smalldata shape:', frames.shape)
         
         # Save to npz
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
         
-        run_number = Path(filename).stem.split('Run')[1][:4]  # Extract run number
+        run_number = Path(filename).stem.split('Run')[1][:4]
         save_path = output_path / f'run{run_number}_extracted.npz'
         
         print(f"Saving data to {save_path}")
@@ -83,10 +111,11 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
             save_path,
             frames=frames,
             delays=delays,
+            delays_raw=h5[data_paths['enc_delay']][:],  # Save raw delays too
+            delays_tt=h5[data_paths['tt_delay']][:],    # Save TT corrections
             I0=i0,
             laser_on_mask=laser_on_mask,
             laser_off_mask=laser_off_mask,
-            # Save filter values for reference
             filter_values={str(k): v for k, v in filters.items()}
         )
         
