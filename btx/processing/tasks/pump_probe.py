@@ -332,11 +332,10 @@ class PumpProbeAnalysis:
         if self.input_data is None:
             raise RuntimeError("plot_diagnostics() called before run()")
             
-        try:
-            # Use original frames directly
-            all_frames = self.input_data.load_data_output.data
-            
-            # 1. Total counts map (top left)
+        # Use original frames directly
+        all_frames = self.input_data.load_data_output.data
+        
+        # 1. Total counts map (top left)
         ax1 = fig.add_subplot(221)
         total_counts = np.sum(all_frames, axis=0)
         im1 = ax1.imshow(total_counts, origin='lower', cmap='viridis')
@@ -486,6 +485,3 @@ class PumpProbeAnalysis:
             plt.tight_layout(rect=[0, 0.05, 1, 0.95])
             plt.savefig(save_dir / f'detailed_diagnostics_delay_{delay:.2f}ps.png')
             plt.close()
-        finally:
-            # Clean up stored data
-            self.input_data = None
