@@ -29,7 +29,7 @@ class LoadData:
                 - setup.run: Run number
                 - setup.exp: Experiment number
                 - load_data.roi: ROI coordinates [x1, x2, y1, y2]
-                - load_data.energy_filter: Energy filter parameters [E0, dE]
+                - load_data.energy_filter: Energy filter parameters [E0, dE, Emin, Emax]
                 - load_data.i0_threshold: I0 threshold value
                 - load_data.time_bin: Time bin size in ps
         """
@@ -42,22 +42,27 @@ class LoadData:
             data: Input image data array
             
         Returns:
-            Thresholded image data array
+            Thresholded image data array with values set to 0 if they:
+            1. Fall outside the harmonic bands defined by [E0 ± dE, 2E0 ± dE, 3E0 ± dE]
+            2. Fall outside the global range [Emin, Emax]
         """
-        E0, dE = self.config['load_data']['energy_filter']
+        E0, dE, Emin, Emax = self.config['load_data']['energy_filter']
         
-        # Define threshold bands
+        # Define harmonic threshold bands
         thresh_1, thresh_2 = E0 - dE, E0 + dE
         thresh_3, thresh_4 = 2 * E0 - dE, 2 * E0 + dE
         thresh_5, thresh_6 = 3 * E0 - dE, 3 * E0 + dE
         
-        # Apply thresholding
+        # Create masks for harmonic bands and global range
+        harmonic_mask = ((data >= thresh_1) & (data <= thresh_2)) | \
+                       ((data >= thresh_3) & (data <= thresh_4)) | \
+                       ((data >= thresh_5) & (data <= thresh_6))
+        global_mask = (data >= Emin) & (data <= Emax)
+        
+        # Apply both filters
         data_cleaned = data.copy()
-        data_cleaned[(data_cleaned < thresh_1)
-                     | ((data_cleaned > thresh_2) & (data_cleaned < thresh_3))
-                     | ((data_cleaned > thresh_4) & (data_cleaned < thresh_5))
-                     | (data_cleaned > thresh_6)] = 0
-                     
+        data_cleaned[~(harmonic_mask & global_mask)] = 0
+        
         return data_cleaned
 
     def _calculate_binned_delays(self, raw_delays: np.ndarray) -> np.ndarray:
@@ -134,7 +139,7 @@ class LoadData:
                 self.config['setup']['run'],
                 self.config['setup']['exp'],
                 self.config['load_data']['roi'],
-                self.config['load_data'].get('energy_filter', [8.8, 5]),
+                self.config['load_data'].get('energy_filter', [8.8, 5, 0, float('inf')]),
                 self.config['load_data'].get('i0_threshold', 200),
                 self.config['load_data'].get('ipm_pos_filter', [0.2, 0.5]),
                 self.config['load_data'].get('time_bin', 2),
