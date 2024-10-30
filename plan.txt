@@ -23,13 +23,35 @@ def plot_diagnostics(self, output, save_dir, detailed_diagnostics=False):
 ## Bottleneck Solutions:
 
 1. Frame Access (~27% of runtime)
-- BEFORE: Reconstructed frames through complex concatenation
-- AFTER: Direct access to original frame data
+- BEFORE: 
+```python
+# Get all frames from all delays for intensity maps
+all_frames = np.concatenate([
+    np.concatenate([self.stacks_on[d].frames, self.stacks_off[d].frames])
+    for d in output.delays
+])
+```
+- AFTER:
+```python
+# Use original frames directly
+all_frames = self.input_data.load_data_output.data
+```
 - Benefit: Eliminates memory-intensive concatenation entirely
 
 2. Energy Filtering (~19.5% of runtime)
-- BEFORE: Created large temporary mask arrays
-- AFTER: Can filter original data directly
+- BEFORE:
+```python
+energy_mask = self._make_energy_filter(all_frames)
+filtered_counts = np.sum(all_frames * energy_mask, axis=0)
+```
+- AFTER:
+```python
+# Filter directly during summation
+filtered_counts = np.sum(
+    all_frames * self._make_energy_filter(all_frames), 
+    axis=0
+)
+```
 - Benefit: More efficient memory usage, single pass through data
 
 ## Implementation Steps:
