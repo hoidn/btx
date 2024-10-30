@@ -116,6 +116,7 @@ class MakeHistogram:
         if layout not in valid_layouts:
             raise ValueError(f"Invalid force_layout value. Must be one of: {valid_layouts}")
 
+    @profile
     def ensure_layout(self, data: np.ndarray) -> np.ndarray:
         """Ensure data has the desired memory layout.
         
@@ -209,6 +210,7 @@ class MakeHistogram:
             bin_centers=bin_centers
         )
 
+    @profile
     def plot_diagnostics(self, output: MakeHistogramOutput, save_dir: Path) -> None:
         """Generate diagnostic plots.
         
