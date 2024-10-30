@@ -310,7 +310,8 @@ class PumpProbeAnalysis:
     def plot_diagnostics(
         self,
         output: PumpProbeAnalysisOutput,
-        save_dir: Path
+        save_dir: Path,
+        detailed_diagnostics: bool = False
     ) -> None:
         """Generate diagnostic plots with proper infinity handling."""
         save_dir.mkdir(parents=True, exist_ok=True)
@@ -396,9 +397,11 @@ class PumpProbeAnalysis:
         plt.savefig(save_dir / 'overview_diagnostics.png')
         plt.close()
 
-        # Plot detailed diagnostics for selected delay points
-        delay_indices = [0, len(output.delays)//2, -1]  # First, middle, and last delays
-        for idx in delay_indices:
+        # Plot detailed diagnostics if enabled
+        if detailed_diagnostics:
+            logger.info("Generating detailed diagnostics plots...")
+            delay_indices = [0, len(output.delays)//2, -1]  # First, middle, and last delays
+            for idx in delay_indices:
             delay = output.delays[idx]
             
             # Get data from stored stacks
