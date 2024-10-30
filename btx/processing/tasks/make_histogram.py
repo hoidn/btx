@@ -158,14 +158,15 @@ class MakeHistogram:
         bins = len(bin_boundaries) - 1
         rows, cols = data.shape[1], data.shape[2]
         
-        return _calculate_histograms_numba(
+        return np.asarray(
+                _calculate_histograms_numba(
             data, 
             bin_boundaries, 
             hist_start_bin,
             bins,
             rows,
             cols
-        )
+        ), order = 'C')
 
     def run(self, input_data: MakeHistogramInput) -> MakeHistogramOutput:
         """Run histogram generation.
