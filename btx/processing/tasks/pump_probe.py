@@ -402,30 +402,30 @@ class PumpProbeAnalysis:
             logger.info("Generating detailed diagnostics plots...")
             delay_indices = [0, len(output.delays)//2, -1]  # First, middle, and last delays
             for idx in delay_indices:
-            delay = output.delays[idx]
+                delay = output.delays[idx]
+                
+                # Get data from stored stacks
+                frames_on = self.stacks_on[delay].frames
+                frames_off = self.stacks_off[delay].frames
+                I0_on = self.stacks_on[delay].I0
+                I0_off = self.stacks_off[delay].I0
+                
+                # Calculate statistics
+                signal_sums_on = np.sum(frames_on * self.signal_mask[None, :, :], axis=(1,2))
+                signal_sums_off = np.sum(frames_off * self.signal_mask[None, :, :], axis=(1,2))
+                bg_sums_on = np.sum(frames_on * self.bg_mask[None, :, :], axis=(1,2))
+                bg_sums_off = np.sum(frames_off * self.bg_mask[None, :, :], axis=(1,2))
+                
+                scale_factor = np.sum(self.signal_mask) / np.sum(self.bg_mask)
+                net_signal_on = (signal_sums_on - scale_factor * bg_sums_on) / np.mean(I0_on)
+                net_signal_off = (signal_sums_off - scale_factor * bg_sums_off) / np.mean(I0_off)
             
-            # Get data from stored stacks
-            frames_on = self.stacks_on[delay].frames
-            frames_off = self.stacks_off[delay].frames
-            I0_on = self.stacks_on[delay].I0
-            I0_off = self.stacks_off[delay].I0
-            
-            # Calculate statistics
-            signal_sums_on = np.sum(frames_on * self.signal_mask[None, :, :], axis=(1,2))
-            signal_sums_off = np.sum(frames_off * self.signal_mask[None, :, :], axis=(1,2))
-            bg_sums_on = np.sum(frames_on * self.bg_mask[None, :, :], axis=(1,2))
-            bg_sums_off = np.sum(frames_off * self.bg_mask[None, :, :], axis=(1,2))
-            
-            scale_factor = np.sum(self.signal_mask) / np.sum(self.bg_mask)
-            net_signal_on = (signal_sums_on - scale_factor * bg_sums_on) / np.mean(I0_on)
-            net_signal_off = (signal_sums_off - scale_factor * bg_sums_off) / np.mean(I0_off)
-            
-            # Create detailed diagnostic figure
-            fig, axes = plt.subplots(3, 2, figsize=(15, 18))
-            fig.suptitle(f'Detailed Diagnostics for Delay {delay:.2f} ps', fontsize=16)
-            
-            # Raw signal distributions
-            axes[0,0].hist(signal_sums_on, bins='auto', alpha=0.5, label='Laser On')
+                # Create detailed diagnostic figure
+                fig, axes = plt.subplots(3, 2, figsize=(15, 18))
+                fig.suptitle(f'Detailed Diagnostics for Delay {delay:.2f} ps', fontsize=16)
+                
+                # Raw signal distributions
+                axes[0,0].hist(signal_sums_on, bins='auto', alpha=0.5, label='Laser On')
             axes[0,0].hist(signal_sums_off, bins='auto', alpha=0.5, label='Laser Off')
             axes[0,0].set_title('Raw Signal Distributions')
             axes[0,0].set_xlabel('Integrated Signal')
