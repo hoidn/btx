@@ -35,7 +35,7 @@ class LoadData:
         """
         self.config = config
         
-    def _apply_energy_threshold(self, data: np.ndarray) -> np.ndarray:
+    def _apply_energy_threshold(self, data: np.ndarray):
         """Apply energy thresholding to the data.
         
         Args:
@@ -57,13 +57,14 @@ class LoadData:
         harmonic_mask = ((data >= thresh_1) & (data <= thresh_2)) | \
                        ((data >= thresh_3) & (data <= thresh_4)) | \
                        ((data >= thresh_5) & (data <= thresh_6))
-        global_mask = (data >= Emin) & (data <= Emax)
+        global_mask = (data > Emin) & (data <= Emax)
         
         # Apply both filters
         data_cleaned = data.copy()
-        data_cleaned[~(harmonic_mask & global_mask)] = 0
+        data_cleaned[~(harmonic_mask)] = 0
+        data[~(harmonic_mask & global_mask)] = 0
         
-        return data_cleaned
+        return data_cleaned, data
 
     def _calculate_binned_delays(self, raw_delays: np.ndarray) -> np.ndarray:
         """Calculate binned delays from raw delay values."""
@@ -147,7 +148,7 @@ class LoadData:
             )
             
         # Apply energy thresholding
-        data = self._apply_energy_threshold(data)
+        data, data_dual_energy_filter = self._apply_energy_threshold(data)
     
         # Calculate binned delays
         binned_delays = self._calculate_binned_delays(laser_delays)
@@ -158,7 +159,8 @@ class LoadData:
             laser_delays=laser_delays,
             laser_on_mask=laser_on_mask,
             laser_off_mask=laser_off_mask,
-            binned_delays=binned_delays
+            binned_delays=binned_delays,
+            data_dual_energy_filter=data_dual_energy_filter
         )
 
     def plot_diagnostics(self, output: LoadDataOutput, save_dir: Path) -> None:
