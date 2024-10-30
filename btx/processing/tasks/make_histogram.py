@@ -134,14 +134,8 @@ class MakeHistogram:
             bin_centers=bin_centers
         )
 
-    def plot_diagnostics(self, output: MakeHistogramOutput, input_data: MakeHistogramInput, save_dir: Path) -> None:
-        """Generate diagnostic plots.
-        
-        Args:
-            output: Output data containing histograms
-            input_data: Input data containing raw frames
-            save_dir: Directory to save plots
-        """
+    def plot_diagnostics(self, output: MakeHistogramOutput, save_dir: Path) -> None:
+        """Generate diagnostic plots."""
         save_dir.mkdir(parents=True, exist_ok=True)
         
         # Create figure with subplots
