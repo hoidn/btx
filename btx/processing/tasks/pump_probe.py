@@ -75,6 +75,7 @@ class PumpProbeAnalysis:
                 - pump_probe_analysis.Emax: Maximum energy threshold (keV)
         """
         self.config = config
+        self.input_data = None  # Store input data for diagnostics
         
         # Set defaults
         if 'pump_probe_analysis' not in self.config:
@@ -235,7 +236,8 @@ class PumpProbeAnalysis:
         Returns:
             PumpProbeAnalysisOutput with calculated signals and uncertainties
         """
-        # Store masks for diagnostics
+        # Store input data and masks for diagnostics
+        self.input_data = input_data
         self.signal_mask = input_data.masks_output.signal_mask
         self.bg_mask = input_data.masks_output.background_mask
         
@@ -327,13 +329,14 @@ class PumpProbeAnalysis:
         # Create four-panel overview figure
         fig = plt.figure(figsize=(16, 16))
         
-        # Get all frames from all delays for intensity maps
-        all_frames = np.concatenate([
-            np.concatenate([self.stacks_on[d].frames, self.stacks_off[d].frames])
-            for d in output.delays
-        ])
-        
-        # 1. Total counts map (top left)
+        if self.input_data is None:
+            raise RuntimeError("plot_diagnostics() called before run()")
+            
+        try:
+            # Use original frames directly
+            all_frames = self.input_data.load_data_output.data
+            
+            # 1. Total counts map (top left)
         ax1 = fig.add_subplot(221)
         total_counts = np.sum(all_frames, axis=0)
         im1 = ax1.imshow(total_counts, origin='lower', cmap='viridis')
@@ -483,3 +486,6 @@ class PumpProbeAnalysis:
             plt.tight_layout(rect=[0, 0.05, 1, 0.95])
             plt.savefig(save_dir / f'detailed_diagnostics_delay_{delay:.2f}ps.png')
             plt.close()
+        finally:
+            # Clean up stored data
+            self.input_data = None
