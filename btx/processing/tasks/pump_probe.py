@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Tuple, Any, NamedTuple
+from typing import Dict, List, Tuple, Any, NamedTuple, Optional
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -8,6 +8,15 @@ from btx.processing.btx_types import (
     PumpProbeAnalysisInput,
     PumpProbeAnalysisOutput,
 )
+
+try:
+    from line_profiler import profile
+    PROFILING = True
+except ImportError:
+    # Create no-op decorator if line_profiler isn't installed
+    def profile(func):
+        return func
+    PROFILING = False
 
 import warnings
 import logging
@@ -55,7 +64,7 @@ class DelayData(NamedTuple):
 class PumpProbeAnalysis:
     """Analyze pump-probe time series data with proper error propagation."""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], enable_profiling: bool = False):
         """Initialize pump-probe analysis task.
         
         Args:
@@ -81,6 +90,7 @@ class PumpProbeAnalysis:
         if 'Emax' not in analysis_config:
             analysis_config['Emax'] = float('inf')
 
+    @profile
     def _make_energy_filter(self, frames: np.ndarray) -> np.ndarray:
         """Create energy filter mask based on config parameters.
         
@@ -94,6 +104,7 @@ class PumpProbeAnalysis:
         Emax = self.config['pump_probe_analysis']['Emax']
         return (frames >= Emin) & (frames <= Emax)
 
+    @profile
     def _group_by_delay(
         self, 
         input_data: PumpProbeAnalysisInput
@@ -165,6 +176,7 @@ class PumpProbeAnalysis:
         
         return stacks_on, stacks_off
 
+    @profile
     def _calculate_signals(
         self,
         frames: np.ndarray,
@@ -213,6 +225,7 @@ class PumpProbeAnalysis:
         
         return signal_mean, bg_mean, variance
 
+    @profile
     def run(self, input_data: PumpProbeAnalysisInput) -> PumpProbeAnalysisOutput:
         """Run pump-probe analysis with corrected error propagation.
         
@@ -293,6 +306,7 @@ class PumpProbeAnalysis:
             n_frames_per_delay=n_frames
         )
 
+    @profile
     def plot_diagnostics(
         self,
         output: PumpProbeAnalysisOutput,
