@@ -69,9 +69,7 @@ config = {
     },
     'load_data': {
         'roi': (130, 290, 95, 340), 
-        # TODO either change the energy filter spec to (emin, emax)
-        # or add a second energy filter that low-thresholds the values.
-        'energy_filter': [14.0, 5.0],
+        'energy_filter': [14.0, 5.0, 9.0, float('inf')],
         'i0_threshold': 1500,
         'time_bin': 2.0,
         'time_tool': [0.0, 0.015]
