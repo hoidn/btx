@@ -177,6 +177,7 @@ class MakeHistogram:
             cols
         ), order = 'C')
 
+    @profile
     def run(self, input_data: MakeHistogramInput) -> MakeHistogramOutput:
         """Run histogram generation.
         
