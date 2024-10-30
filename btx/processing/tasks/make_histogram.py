@@ -139,7 +139,7 @@ class MakeHistogram:
         save_dir.mkdir(parents=True, exist_ok=True)
         
         # Create figure with subplots
-        fig = plt.figure(figsize=(15, 5))
+        fig = plt.figure(figsize=(20, 5))
         
         # 1. Mean histogram across all pixels (log scale)
         ax1 = fig.add_subplot(121)
@@ -150,12 +150,20 @@ class MakeHistogram:
         ax1.set_ylabel('Counts')
         ax1.grid(True)
         
-        # 2. 2D map of total counts
+        # 2. 2D map of histogram total counts
         ax2 = fig.add_subplot(122)
         total_counts = np.sum(output.histograms, axis=0)
         im2 = ax2.imshow(total_counts, cmap='viridis')
-        ax2.set_title('Total Counts Map')
+        ax2.set_title('Histogram Total Counts Map')
         plt.colorbar(im2, ax=ax2, label='Total Counts')
+        
+        # 3. Total counts map with energy threshold
+        ax3 = fig.add_subplot(133)
+        emin = self.config['make_histogram']['bin_boundaries'][0]
+        total_counts_raw = np.sum(input_data.load_data_output.data, axis=0)
+        im3 = ax3.imshow(total_counts_raw, cmap='viridis')
+        ax3.set_title(f'Total Counts Map (Emin = {emin:.1f})')
+        plt.colorbar(im3, ax=ax3, label='Total Counts')
         
         plt.tight_layout()
         plt.savefig(save_dir / 'make_histogram_diagnostics.png')

@@ -309,18 +309,8 @@ class PumpProbeAnalysis:
         if self.input_data is None:
             raise RuntimeError("plot_diagnostics() called before run()")
             
-        # Use original frames directly
-        all_frames = self.input_data.load_data_output.data_dual_energy_filter
-        
-        # 1. Total counts map (top left)
-        ax1 = fig.add_subplot(221)
-        total_counts = np.sum(all_frames, axis=0)
-        im1 = ax1.imshow(total_counts, origin='lower', cmap='viridis')
-        ax1.set_title('Total Counts Map')
-        plt.colorbar(im1, ax=ax1)
-        
-        # 2. Signal and background masks (top right)
-        ax2 = fig.add_subplot(222)
+        # 1. Signal and background masks (top left)
+        ax2 = fig.add_subplot(221)
         mask_display = np.zeros_like(self.signal_mask, dtype=float)
         mask_display[self.signal_mask] = 1
         mask_display[self.bg_mask] = 0.5
@@ -328,8 +318,8 @@ class PumpProbeAnalysis:
         ax2.set_title('Analysis Masks (Signal=1, Background=0.5)')
         plt.colorbar(im2, ax=ax2)
         
-        # 3. Time traces with error bars (bottom left)
-        ax3 = fig.add_subplot(223)
+        # 2. Time traces with error bars (bottom left)
+        ax3 = fig.add_subplot(222)
         ax3.errorbar(output.delays, output.signals_on,
                     yerr=output.std_devs_on, fmt='rs-',
                     label='Laser On', capsize=3)
@@ -341,8 +331,8 @@ class PumpProbeAnalysis:
         ax3.legend()
         ax3.grid(True)
         
-        # 4. Statistical significance (bottom right)
-        ax4 = fig.add_subplot(224)
+        # 3. Statistical significance (bottom right)
+        ax4 = fig.add_subplot(223)
         
         # Convert p-values to log scale with capped infinities
         max_log_p = 16  # Maximum value to show on plot
