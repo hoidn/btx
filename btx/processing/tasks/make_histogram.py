@@ -9,7 +9,7 @@ import random
 from numba.core.errors import NumbaWarning
 import warnings
 
-# Suppress Numba TBB warning
+# Suppress Numba warnings
 warnings.filterwarnings('ignore', category=NumbaWarning)
 
 class MakeHistogramInput:
@@ -50,13 +50,12 @@ def memoize_subsampled(func):
 
 @jit(nopython=True)
 def _calculate_histograms_numba(data, bin_boundaries, hist_start_bin, bins, rows, cols):
-    """Numba-optimized histogram calculation optimized for F-order arrays."""
+    """Numba-optimized histogram calculation."""
     hist_shape = (bins, rows, cols)
     histograms = np.zeros(hist_shape, dtype=np.float64)
     
-    # Process one frame at a time, which is contiguous in memory with F-order
     for frame in range(data.shape[0]):
-        frame_data = data[frame]  # This slice is contiguous in F-order
+        frame_data = data[frame]
         for row in range(rows):
             for col in range(cols):
                 value = frame_data[row, col]
@@ -70,10 +69,26 @@ def _calculate_histograms_numba(data, bin_boundaries, hist_start_bin, bins, rows
     return histograms[hist_start_bin:, :, :]
 
 class MakeHistogram:
-    """Generate histograms from XPP data with F-order optimization."""
+    """Generate histograms from XPP data with configurable memory layout.
+    
+    This implementation allows control over memory layout for performance optimization
+    and benchmarking purposes. By default, it uses F-order (column-major) layout for
+    optimal performance, but can be configured to use C-order or preserve input layout.
+    """
     
     def __init__(self, config: Dict[str, Any]):
-        """Initialize histogram generation task."""
+        """Initialize histogram generation task.
+        
+        Args:
+            config: Dictionary containing:
+                make_histogram:
+                    bin_boundaries: Array of bin boundaries
+                    hist_start_bin: Index of first bin to include
+                    force_layout: Memory layout policy (optional)
+                        'f': Force F-order (default)
+                        'c': Force C-order
+                        'preserve': Use input array's layout
+        """
         self.config = config
         
         if 'make_histogram' not in self.config:
@@ -84,6 +99,35 @@ class MakeHistogram:
             hist_config['bin_boundaries'] = np.arange(5, 30, 0.2)
         if 'hist_start_bin' not in hist_config:
             hist_config['hist_start_bin'] = 1
+        if 'force_layout' not in hist_config:
+            hist_config['force_layout'] = 'f'  # Default to F-order
+            
+        # Validate layout configuration
+        valid_layouts = {'f', 'c', 'preserve'}
+        layout = hist_config['force_layout'].lower()
+        if layout not in valid_layouts:
+            raise ValueError(f"Invalid force_layout value. Must be one of: {valid_layouts}")
+
+    def ensure_layout(self, data: np.ndarray) -> np.ndarray:
+        """Ensure data has the desired memory layout.
+        
+        Args:
+            data: Input numpy array
+            
+        Returns:
+            Array with desired memory layout
+        """
+        layout = self.config['make_histogram']['force_layout'].lower()
+        
+        if layout == 'preserve':
+            return data
+        
+        if layout == 'f' and not data.flags.f_contiguous:
+            return np.asfortranarray(data)
+        elif layout == 'c' and not data.flags.c_contiguous:
+            return np.ascontiguousarray(data)
+            
+        return data
 
     @memoize_subsampled
     def _calculate_histograms(
@@ -95,7 +139,7 @@ class MakeHistogram:
         """Calculate histograms for each pixel using Numba optimization.
         
         Args:
-            data: 3D array (frames, rows, cols) in Fortran order
+            data: 3D array (frames, rows, cols)
             bin_boundaries: Array of histogram bin boundaries
             hist_start_bin: Index of first bin to include
             
@@ -105,7 +149,11 @@ class MakeHistogram:
         # Validate inputs
         assert isinstance(data, np.ndarray), f"Expected numpy array, got {type(data)}"
         assert data.ndim == 3, f"Expected 3D array, got shape {data.shape}"
-        assert data.flags.f_contiguous, "Input array must be F-contiguous"
+        assert bin_boundaries.ndim == 1, "Bin boundaries must be 1D array"
+        assert np.all(np.diff(bin_boundaries) > 0), "Bin boundaries must be monotonically increasing"
+        
+        # Apply memory layout policy
+        data = self.ensure_layout(data)
         
         bins = len(bin_boundaries) - 1
         rows, cols = data.shape[1], data.shape[2]
@@ -120,13 +168,20 @@ class MakeHistogram:
         )
 
     def run(self, input_data: MakeHistogramInput) -> MakeHistogramOutput:
-        """Run histogram generation."""
+        """Run histogram generation.
+        
+        Args:
+            input_data: Input data container
+            
+        Returns:
+            MakeHistogramOutput containing histograms and bin information
+        """
         hist_config = self.config['make_histogram']
         bin_boundaries = np.array(hist_config['bin_boundaries'])
         hist_start_bin = hist_config['hist_start_bin']
         
-        # Ensure data is in F-order
-        data = np.asarray(input_data.load_data_output.data, order='F')
+        # Apply memory layout policy
+        data = self.ensure_layout(input_data.load_data_output.data)
         
         histograms = self._calculate_histograms(
             data,
@@ -144,7 +199,12 @@ class MakeHistogram:
         )
 
     def plot_diagnostics(self, output: MakeHistogramOutput, save_dir: Path) -> None:
-        """Generate diagnostic plots."""
+        """Generate diagnostic plots.
+        
+        Args:
+            output: Histogram calculation output
+            save_dir: Directory to save plots
+        """
         save_dir.mkdir(parents=True, exist_ok=True)
         
         fig = plt.figure(figsize=(15, 5))

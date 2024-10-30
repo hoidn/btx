@@ -147,6 +147,9 @@ class LoadData:
                 self.config['load_data'].get('time_tool', [0., 0.005])
             )
             
+        # TODO maybe handle this more transparently
+        data = np.asarray(data, order='F')
+
         # Apply energy thresholding
         data, data_dual_energy_filter = self._apply_energy_threshold(data)
     
