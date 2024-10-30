@@ -310,7 +310,7 @@ class PumpProbeAnalysis:
             raise RuntimeError("plot_diagnostics() called before run()")
             
         # Use original frames directly
-        all_frames = self.input_data.load_data_output.data
+        all_frames = self.input_data.load_data_output.data_dual_energy_filter
         
         # 1. Total counts map (top left)
         ax1 = fig.add_subplot(221)
