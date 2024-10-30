@@ -309,27 +309,27 @@ class PumpProbeAnalysis:
         if self.input_data is None:
             raise RuntimeError("plot_diagnostics() called before run()")
             
-        # 1. Signal and background masks (top left)
+        # 1. Time traces with error bars (top left)
         ax2 = fig.add_subplot(221)
+        ax2.errorbar(output.delays, output.signals_on,
+                    yerr=output.std_devs_on, fmt='rs-',
+                    label='Laser On', capsize=3)
+        ax2.errorbar(output.delays, output.signals_off,
+                    yerr=output.std_devs_off, fmt='ks-',
+                    label='Laser Off', capsize=3, alpha=0.5)
+        ax2.set_xlabel('Time Delay (ps)')
+        ax2.set_ylabel('Normalized Signal')
+        ax2.legend()
+        ax2.grid(True)
+        
+        # 2. Signal and background masks (top right)
+        ax3 = fig.add_subplot(222)
         mask_display = np.zeros_like(self.signal_mask, dtype=float)
         mask_display[self.signal_mask] = 1
         mask_display[self.bg_mask] = 0.5
-        im2 = ax2.imshow(mask_display, origin='lower', cmap='viridis')
-        ax2.set_title('Analysis Masks (Signal=1, Background=0.5)')
-        plt.colorbar(im2, ax=ax2)
-        
-        # 2. Time traces with error bars (bottom left)
-        ax3 = fig.add_subplot(222)
-        ax3.errorbar(output.delays, output.signals_on,
-                    yerr=output.std_devs_on, fmt='rs-',
-                    label='Laser On', capsize=3)
-        ax3.errorbar(output.delays, output.signals_off,
-                    yerr=output.std_devs_off, fmt='ks-',
-                    label='Laser Off', capsize=3, alpha=0.5)
-        ax3.set_xlabel('Time Delay (ps)')
-        ax3.set_ylabel('Normalized Signal')
-        ax3.legend()
-        ax3.grid(True)
+        im3 = ax3.imshow(mask_display, origin='lower', cmap='viridis')
+        ax3.set_title('Analysis Masks (Signal=1, Background=0.5)')
+        plt.colorbar(im3, ax=ax3)
         
         # 3. Statistical significance (bottom right)
         ax4 = fig.add_subplot(223)
