@@ -91,9 +91,7 @@ config = {
     },
     'pump_probe_analysis': {
         'min_count': 2,                # Minimum frames per delay bin
-        'significance_level': 0.05,     # P-value threshold for significance
-        'Emin': 9.0,                   # Minimum energy threshold (keV)
-        'Emax': float('inf')           # Maximum energy threshold (keV)
+        'significance_level': 0.05      # P-value threshold for significance
     }
 }
 
