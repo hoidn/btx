@@ -177,9 +177,9 @@ class PumpProbeAnalysis:
         Returns:
             Tuple of (normalized_signal, normalized_background, variance)
         """
-        # Calculate per-frame sums
-        signal_sums = np.sum(frames * signal_mask[None, :, :], axis=(1,2))
-        bg_sums = np.sum(frames * bg_mask[None, :, :], axis=(1,2))
+        # Calculate per-frame sums using einsum for better performance
+        signal_sums = np.einsum('ijk,jk->i', frames, signal_mask)
+        bg_sums = np.einsum('ijk,jk->i', frames, bg_mask)
         
         # Scale background by mask sizes
         scale_factor = np.sum(signal_mask) / np.sum(bg_mask)
