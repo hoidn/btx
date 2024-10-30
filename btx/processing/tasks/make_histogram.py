@@ -1,5 +1,13 @@
 from pathlib import Path
 from typing import Dict, Any
+try:
+    from line_profiler import profile
+    PROFILING = True
+except ImportError:
+    # Create no-op decorator if line_profiler isn't installed
+    def profile(func):
+        return func
+    PROFILING = False
 import numpy as np
 import matplotlib.pyplot as plt
 from numba import jit
@@ -130,6 +138,7 @@ class MakeHistogram:
         return data
 
     @memoize_subsampled
+    @profile
     def _calculate_histograms(
         self,
         data: np.ndarray,
