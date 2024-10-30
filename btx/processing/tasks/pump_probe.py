@@ -71,8 +71,6 @@ class PumpProbeAnalysis:
             config: Dictionary containing:
                 - pump_probe_analysis.min_count: Minimum frames per delay bin
                 - pump_probe_analysis.significance_level: P-value threshold
-                - pump_probe_analysis.Emin: Minimum energy threshold (keV)
-                - pump_probe_analysis.Emax: Maximum energy threshold (keV)
         """
         self.config = config
         self.input_data = None  # Store input data for diagnostics
@@ -86,24 +84,7 @@ class PumpProbeAnalysis:
             analysis_config['min_count'] = 2
         if 'significance_level' not in analysis_config:
             analysis_config['significance_level'] = 0.05
-        if 'Emin' not in analysis_config:
-            analysis_config['Emin'] = 7.0
-        if 'Emax' not in analysis_config:
-            analysis_config['Emax'] = float('inf')
 
-    @profile
-    def _make_energy_filter(self, frames: np.ndarray) -> np.ndarray:
-        """Create energy filter mask based on config parameters.
-        
-        Args:
-            frames: Input frames to filter
-            
-        Returns:
-            Boolean mask for energy filtering
-        """
-        Emin = self.config['pump_probe_analysis']['Emin']
-        Emax = self.config['pump_probe_analysis']['Emax']
-        return (frames >= Emin) & (frames <= Emax)
 
     @profile
     def _group_by_delay(
@@ -196,13 +177,9 @@ class PumpProbeAnalysis:
         Returns:
             Tuple of (normalized_signal, normalized_background, variance)
         """
-        # Apply energy filter
-        energy_mask = self._make_energy_filter(frames)
-        filtered_frames = frames * energy_mask
-        
         # Calculate per-frame sums
-        signal_sums = np.sum(filtered_frames * signal_mask[None, :, :], axis=(1,2))
-        bg_sums = np.sum(filtered_frames * bg_mask[None, :, :], axis=(1,2))
+        signal_sums = np.sum(frames * signal_mask[None, :, :], axis=(1,2))
+        bg_sums = np.sum(frames * bg_mask[None, :, :], axis=(1,2))
         
         # Scale background by mask sizes
         scale_factor = np.sum(signal_mask) / np.sum(bg_mask)
@@ -342,12 +319,13 @@ class PumpProbeAnalysis:
         ax1.set_title('Total Counts Map')
         plt.colorbar(im1, ax=ax1)
         
-        # 2. Energy filtered map (top right)
+        # 2. Signal and background masks (top right)
         ax2 = fig.add_subplot(222)
-        energy_mask = self._make_energy_filter(all_frames)
-        filtered_counts = np.sum(all_frames * energy_mask, axis=0)
-        im2 = ax2.imshow(filtered_counts, origin='lower', cmap='viridis')
-        ax2.set_title(f'Energy Filtered Map (Emin={self.config["pump_probe_analysis"]["Emin"]}, Emax={self.config["pump_probe_analysis"]["Emax"]})')
+        mask_display = np.zeros_like(self.signal_mask, dtype=float)
+        mask_display[self.signal_mask] = 1
+        mask_display[self.bg_mask] = 0.5
+        im2 = ax2.imshow(mask_display, origin='lower', cmap='viridis')
+        ax2.set_title('Analysis Masks (Signal=1, Background=0.5)')
         plt.colorbar(im2, ax=ax2)
         
         # 3. Time traces with error bars (bottom left)
