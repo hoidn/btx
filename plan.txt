@@ -1,100 +1,86 @@
 # Optimization Plan for plot_diagnostics() Bottlenecks
 
-## Bottleneck 1: Frame Concatenation (~27% of runtime)
+## Key Insight: Input Data Already Available
 
-Current code:
+The original frames are already available in input_data.load_data_output.data, making the frame concatenation unnecessary.
+
+## Implementation Changes:
+
+1. Store Input Data
 ```python
-all_frames = np.concatenate([
-    np.concatenate([self.stacks_on[d].frames, self.stacks_off[d].frames])
-    for d in output.delays
-])
+def run(self, input_data: PumpProbeAnalysisInput):
+    self.input_data = input_data  # Store for plot_diagnostics
+    ...
 ```
 
-Problems:
-- Creates large temporary arrays
-- Requires double concatenation
-- Uses excessive memory
-- Scales poorly with number of frames
-
-Optimized approach:
+2. Use Stored Data in plot_diagnostics
 ```python
-total_counts = None
-for delay in output.delays:
-    frames_on = self.stacks_on[delay].frames
-    frames_off = self.stacks_off[delay].frames
-    
-    if total_counts is None:
-        total_counts = np.zeros_like(frames_on[0])
-    
-    total_counts += np.sum(frames_on, axis=0) + np.sum(frames_off, axis=0)
+def plot_diagnostics(self, output, save_dir, detailed_diagnostics=False):
+    # Use original frames directly
+    all_frames = self.input_data.load_data_output.data
 ```
 
-Benefits:
-- Constant memory usage
-- Single pass through data
-- No temporary arrays
-- O(n) scaling with frames
-- Directly computes needed sum
+## Bottleneck Solutions:
 
-## Bottleneck 2: Energy Filtering (~19.5% of runtime)
+1. Frame Access (~27% of runtime)
+- BEFORE: Reconstructed frames through complex concatenation
+- AFTER: Direct access to original frame data
+- Benefit: Eliminates memory-intensive concatenation entirely
 
-Current code:
-```python
-energy_mask = self._make_energy_filter(all_frames)
-filtered_counts = np.sum(all_frames * energy_mask, axis=0)
-```
-
-Problems:
-- Applies filter to all frames at once
-- Creates large temporary mask array
-- Requires full frame array in memory
-- Redundant calculations for same energy values
-
-Optimized approach:
-```python
-filtered_counts = None
-for delay in output.delays:
-    frames_on = self.stacks_on[delay].frames
-    frames_off = self.stacks_off[delay].frames
-    
-    if filtered_counts is None:
-        filtered_counts = np.zeros_like(frames_on[0])
-    
-    # Apply energy filter in chunks
-    energy_mask_on = self._make_energy_filter(frames_on)
-    energy_mask_off = self._make_energy_filter(frames_off)
-    
-    filtered_counts += (np.sum(frames_on * energy_mask_on, axis=0) + 
-                       np.sum(frames_off * energy_mask_off, axis=0))
-```
-
-Benefits:
-- Processes data in chunks
-- Constant memory usage
-- Can potentially cache masks
-- Combines filtering and summing
-- No large temporary arrays
+2. Energy Filtering (~19.5% of runtime)
+- BEFORE: Created large temporary mask arrays
+- AFTER: Can filter original data directly
+- Benefit: More efficient memory usage, single pass through data
 
 ## Implementation Steps:
 
-1. Replace frame concatenation with incremental summing
-2. Modify energy filtering to work in chunks
-3. Add optional mask caching if same energy values repeat
-4. Consider adding progress tracking for long operations
-5. Add memory usage logging/monitoring
-6. Benchmark before/after performance
+1. Add input_data storage in run()
+2. Modify plot_diagnostics() to use stored input_data
+3. Add validation to ensure plot_diagnostics() only runs after run()
+4. Add cleanup of stored input_data after use
+5. Update energy filtering to work with original data
+6. Add progress logging for long operations
+7. Add memory usage monitoring
+8. Benchmark improvements
 
 ## Expected Improvements:
 
-- Memory usage: ~70% reduction
-- Runtime: ~40% reduction for these sections
-- Better scaling with dataset size
+- Memory usage: ~90% reduction (no concatenation needed)
+- Runtime: ~50% reduction (direct data access)
 - More predictable performance
+- Better error handling
 
-## Future Optimizations to Consider:
+## Code Organization:
 
-1. Parallel processing for frame accumulation
-2. Downsampling frames for visualization
-3. Caching energy mask calculations
-4. Making detailed diagnostics optional
-5. Using memory-mapped arrays for very large datasets
+1. Add input data storage:
+```python
+def __init__(self, config):
+    self.config = config
+    self.input_data = None  # Will store input data
+```
+
+2. Add validation:
+```python
+def plot_diagnostics(self, output, save_dir, detailed_diagnostics=False):
+    if self.input_data is None:
+        raise RuntimeError("plot_diagnostics() called before run()")
+```
+
+3. Add cleanup:
+```python
+def plot_diagnostics(self, output, save_dir, detailed_diagnostics=False):
+    try:
+        # Use self.input_data...
+        return result
+    finally:
+        # Clean up stored data
+        self.input_data = None
+```
+
+## Future Optimizations:
+
+1. Optional progress tracking
+2. Memory-mapped array support
+3. Parallel processing for large datasets
+4. Configurable diagnostic detail levels
+5. Caching of energy filter masks
