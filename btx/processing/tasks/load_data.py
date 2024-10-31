@@ -56,15 +56,7 @@ class LoadData:
         """
         E0, dE, Emin, Emax = self.config['load_data']['energy_filter']
         
-        def numpy_impl():
-            """Original numpy implementation"""
-            harmonic_mask = ((data >= (E0 - dE)) & (data <= (E0 + dE)) |
-                           (data >= (2*E0 - dE)) & (data <= (2*E0 + dE)) |
-                           (data >= (3*E0 - dE)) & (data <= (3*E0 + dE)))
-            global_mask = (data > Emin) & (data <= Emax)
-            return harmonic_mask, global_mask
-
-        def numexpr_impl():
+        def _calc_masks():
             """Numexpr implementation"""
             local_dict = {
                 'data': data,
@@ -85,28 +77,8 @@ class LoadData:
                                     local_dict=local_dict)
             return harmonic_mask, global_mask
 
-        # Benchmark both implementations
-        import time
-        
-        # Time numpy version
-        t0 = time.perf_counter()
-        for _ in range(3):
-            harmonic_mask, global_mask = numpy_impl()
-        numpy_time = (time.perf_counter() - t0) / 3
-        
-        # Time numexpr version  
-        t0 = time.perf_counter()
-        for _ in range(3):
-            harmonic_mask, global_mask = numexpr_impl()
-        numexpr_time = (time.perf_counter() - t0) / 3
-        
-        print(f"\nBenchmark results for _apply_energy_threshold:")
-        print(f"Numpy implementation: {numpy_time:.3f}s")
-        print(f"Numexpr implementation: {numexpr_time:.3f}s")
-        print(f"Speedup: {numpy_time/numexpr_time:.2f}x\n")
-        
-        # Use the faster numexpr implementation
-        harmonic_mask, global_mask = numexpr_impl()
+        # Calculate masks using numexpr
+        harmonic_mask, global_mask = _calc_masks()
         
         # Apply both filters
         data_cleaned = data.copy()
