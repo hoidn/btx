@@ -2,6 +2,13 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
 import matplotlib.pyplot as plt
+import numexpr as ne
+
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
 
 from btx.processing.btx_types import LoadDataInput, LoadDataOutput
 
@@ -29,36 +36,57 @@ class LoadData:
                 - setup.run: Run number
                 - setup.exp: Experiment number
                 - load_data.roi: ROI coordinates [x1, x2, y1, y2]
-                - load_data.energy_filter: Energy filter parameters [E0, dE]
+                - load_data.energy_filter: Energy filter parameters [E0, dE, Emin, Emax]
                 - load_data.i0_threshold: I0 threshold value
                 - load_data.time_bin: Time bin size in ps
         """
         self.config = config
         
-    def _apply_energy_threshold(self, data: np.ndarray) -> np.ndarray:
+    @profile
+    def _apply_energy_threshold(self, data: np.ndarray):
         """Apply energy thresholding to the data.
         
         Args:
             data: Input image data array
             
         Returns:
-            Thresholded image data array
+            Thresholded image data array with values set to 0 if they:
+            1. Fall outside the harmonic bands defined by [E0 ± dE, 2E0 ± dE, 3E0 ± dE]
+            2. Fall outside the global range [Emin, Emax]
         """
-        E0, dE = self.config['load_data']['energy_filter']
+        E0, dE, Emin, Emax = self.config['load_data']['energy_filter']
         
-        # Define threshold bands
-        thresh_1, thresh_2 = E0 - dE, E0 + dE
-        thresh_3, thresh_4 = 2 * E0 - dE, 2 * E0 + dE
-        thresh_5, thresh_6 = 3 * E0 - dE, 3 * E0 + dE
+        def _calc_masks():
+            """Numexpr implementation"""
+            local_dict = {
+                'data': data,
+                'E0': E0,
+                'dE': dE,
+                'Emin': Emin,
+                'Emax': Emax
+            }
+            
+            harmonic_mask = ne.evaluate(
+                "(data >= (E0 - dE)) & (data <= (E0 + dE)) |"
+                "(data >= (2*E0 - dE)) & (data <= (2*E0 + dE)) |"
+                "(data >= (3*E0 - dE)) & (data <= (3*E0 + dE))",
+                local_dict=local_dict
+            )
+            
+            global_mask = ne.evaluate("(data > Emin) & (data <= Emax)", 
+                                    local_dict=local_dict)
+            return harmonic_mask, global_mask
+
+        # Calculate masks using numexpr
+        harmonic_mask, global_mask = _calc_masks()
         
-        # Apply thresholding
+        # Apply both filters
         data_cleaned = data.copy()
-        data_cleaned[(data_cleaned < thresh_1)
-                     | ((data_cleaned > thresh_2) & (data_cleaned < thresh_3))
-                     | ((data_cleaned > thresh_4) & (data_cleaned < thresh_5))
-                     | (data_cleaned > thresh_6)] = 0
-                     
-        return data_cleaned
+        data_cleaned[~harmonic_mask] = 0
+        #data[~(harmonic_mask & global_mask)] = 0
+        data[~(global_mask)] = 0
+        
+        return data_cleaned, data
 
     def _calculate_binned_delays(self, raw_delays: np.ndarray) -> np.ndarray:
         """Calculate binned delays from raw delay values."""
@@ -163,7 +191,7 @@ class LoadData:
                 self.config['setup']['run'],
                 self.config['setup']['exp'],
                 self.config['load_data']['roi'],
-                self.config['load_data'].get('energy_filter', [8.8, 5]),
+                self.config['load_data'].get('energy_filter', [8.8, 5, 0, float('inf')]),
                 self.config['load_data'].get('i0_threshold', 200),
                 self.config['load_data'].get('ipm_pos_filter', [0.2, 0.5]),
                 self.config['load_data'].get('time_bin', 2),
@@ -171,7 +199,7 @@ class LoadData:
             )
             
         # Apply energy thresholding
-        data = self._apply_energy_threshold(data)
+        data, data_global_energy_filter = self._apply_energy_threshold(data)
     
         # Calculate binned delays
         binned_delays = self._calculate_binned_delays(laser_delays)
@@ -182,7 +210,8 @@ class LoadData:
             laser_delays=laser_delays,
             laser_on_mask=laser_on_mask,
             laser_off_mask=laser_off_mask,
-            binned_delays=binned_delays
+            binned_delays=binned_delays,
+            data_global_energy_filter=data_global_energy_filter
         )
 
     def plot_diagnostics(self, output: LoadDataOutput, save_dir: Path) -> None:

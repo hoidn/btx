@@ -1,0 +1,108 @@
+# Optimization Plan for plot_diagnostics() Bottlenecks
+
+## Key Insight: Input Data Already Available
+
+The original frames are already available in input_data.load_data_output.data, making the frame concatenation unnecessary.
+
+## Implementation Changes:
+
+1. Store Input Data
+```python
+def run(self, input_data: PumpProbeAnalysisInput):
+    self.input_data = input_data  # Store for plot_diagnostics
+    ...
+```
+
+2. Use Stored Data in plot_diagnostics
+```python
+def plot_diagnostics(self, output, save_dir, detailed_diagnostics=False):
+    # Use original frames directly
+    all_frames = self.input_data.load_data_output.data
+```
+
+## Bottleneck Solutions:
+
+1. Frame Access (~27% of runtime)
+- BEFORE: 
+```python
+# Get all frames from all delays for intensity maps
+all_frames = np.concatenate([
+    np.concatenate([self.stacks_on[d].frames, self.stacks_off[d].frames])
+    for d in output.delays
+])
+```
+- AFTER:
+```python
+# Use original frames directly
+all_frames = self.input_data.load_data_output.data
+```
+- Benefit: Eliminates memory-intensive concatenation entirely
+
+2. Energy Filtering (~19.5% of runtime)
+- BEFORE:
+```python
+energy_mask = self._make_energy_filter(all_frames)
+filtered_counts = np.sum(all_frames * energy_mask, axis=0)
+```
+- AFTER:
+```python
+# Filter directly during summation
+filtered_counts = np.sum(
+    all_frames * self._make_energy_filter(all_frames), 
+    axis=0
+)
+```
+- Benefit: More efficient memory usage, single pass through data
+
+## Implementation Steps:
+
+1. Add input_data storage in run()
+2. Modify plot_diagnostics() to use stored input_data
+3. Add validation to ensure plot_diagnostics() only runs after run()
+4. Add cleanup of stored input_data after use
+5. Update energy filtering to work with original data
+6. Add progress logging for long operations
+7. Add memory usage monitoring
+8. Benchmark improvements
+
+## Expected Improvements:
+
+- Memory usage: ~90% reduction (no concatenation needed)
+- Runtime: ~50% reduction (direct data access)
+- More predictable performance
+- Better error handling
+
+## Code Organization:
+
+1. Add input data storage:
+```python
+def __init__(self, config):
+    self.config = config
+    self.input_data = None  # Will store input data
+```
+
+2. Add validation:
+```python
+def plot_diagnostics(self, output, save_dir, detailed_diagnostics=False):
+    if self.input_data is None:
+        raise RuntimeError("plot_diagnostics() called before run()")
+```
+
+3. Add cleanup:
+```python
+def plot_diagnostics(self, output, save_dir, detailed_diagnostics=False):
+    try:
+        # Use self.input_data...
+        return result
+    finally:
+        # Clean up stored data
+        self.input_data = None
+```
+
+## Future Optimizations:
+
+1. Optional progress tracking
+2. Memory-mapped array support
+3. Parallel processing for large datasets
+4. Configurable diagnostic detail levels
+5. Caching of energy filter masks

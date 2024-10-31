@@ -6,12 +6,16 @@ from scipy.ndimage import binary_dilation
 import matplotlib.pyplot as plt
 import warnings
 
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
+
 from btx.processing.btx_types import (
     BuildPumpProbeMasksInput,
     BuildPumpProbeMasksOutput,
-    SignalMaskStages,
-    MakeHistogramOutput,
-    CalculatePValuesOutput
+    SignalMaskStages
 )
 
 class BuildPumpProbeMasks:
@@ -307,26 +311,7 @@ class BuildPumpProbeMasks:
                 RuntimeWarning
             )
 
-    def process(self, config: Dict[str, Any],
-                histogram_output: MakeHistogramOutput,
-                p_values_output: CalculatePValuesOutput) -> BuildPumpProbeMasksOutput:
-        """Process mask generation directly from inputs.
-        
-        Args:
-            config: Configuration dictionary
-            histogram_output: Output from MakeHistogram task
-            p_values_output: Output from CalculatePValues task
-            
-        Returns:
-            BuildPumpProbeMasksOutput containing signal and background masks
-        """
-        input_data = BuildPumpProbeMasksInput(
-            config=config,
-            histogram_output=histogram_output,
-            p_values_output=p_values_output
-        )
-        return self.run(input_data)
-
+    @profile
     def run(self, input_data: BuildPumpProbeMasksInput) -> BuildPumpProbeMasksOutput:
         """Run mask generation."""
         # Validate inputs
@@ -437,20 +422,7 @@ class BuildPumpProbeMasks:
             plt.savefig(save_dir / 'mask_generation_stages.png')
             plt.close()
             
-            # 2. Plot final masks
-            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-            
-            ax1.imshow(output.signal_mask)
-            ax1.set_title('Signal Mask')
-            
-            ax2.imshow(output.background_mask)
-            ax2.set_title('Background Mask')
-            
-            plt.tight_layout()
-            plt.savefig(save_dir / 'final_masks.png')
-            plt.close()
-            
-            # 3. Plot distance transform
+            # 2. Plot distance transform
             fig, ax = plt.subplots(figsize=(8, 8))
             
             # Calculate distance from signal mask

@@ -4,10 +4,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 
-from btx.processing.btx_types import (
-    CalculatePValuesInput, CalculatePValuesOutput,
-    MeasureEMDOutput
-)
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
+
+from btx.processing.btx_types import CalculatePValuesInput, CalculatePValuesOutput
 
 class CalculatePValues:
     """Calculate p-values from EMD values and null distribution."""
@@ -58,23 +61,7 @@ class CalculatePValues:
                 
         return p_values
 
-    def process(self, config: Dict[str, Any],
-                emd_output: MeasureEMDOutput) -> CalculatePValuesOutput:
-        """Process p-value calculation directly from inputs.
-        
-        Args:
-            config: Configuration dictionary
-            emd_output: Output from MeasureEMD task
-            
-        Returns:
-            CalculatePValuesOutput containing p-values and derived data
-        """
-        input_data = CalculatePValuesInput(
-            config=config,
-            emd_output=emd_output
-        )
-        return self.run(input_data)
-
+    @profile
     def run(self, input_data: CalculatePValuesInput) -> CalculatePValuesOutput:
         """Run p-value calculation.
         

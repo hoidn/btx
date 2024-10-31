@@ -5,9 +5,13 @@ import matplotlib.pyplot as plt
 from scipy.stats import wasserstein_distance
 import warnings
 
-from btx.processing.btx_types import (
-    MeasureEMDInput, MeasureEMDOutput, MakeHistogramOutput
-)
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
+
+from btx.processing.btx_types import MeasureEMDInput, MeasureEMDOutput
 
 class MeasureEMD:
     """Calculate Earth Mover's Distance between pixel histograms and background."""
@@ -60,6 +64,7 @@ class MeasureEMD:
         roi_histograms = histograms[:, x1:x2, y1:y2]
         return np.mean(roi_histograms, axis=(1, 2))
         
+    @profile
     def _calculate_emd_values(
         self,
         histograms: np.ndarray,
@@ -106,23 +111,6 @@ class MeasureEMD:
             null_emd_values.append(null_emd_value)
         
         return np.array(null_emd_values)
-
-    def process(self, config: Dict[str, Any],
-                histogram_output: MakeHistogramOutput) -> MeasureEMDOutput:
-        """Process EMD calculation directly from inputs.
-        
-        Args:
-            config: Configuration dictionary
-            histogram_output: Output from MakeHistogram task
-            
-        Returns:
-            MeasureEMDOutput containing EMD values and null distribution
-        """
-        input_data = MeasureEMDInput(
-            config=config,
-            histogram_output=histogram_output
-        )
-        return self.run(input_data)
 
     def run(self, input_data: MeasureEMDInput) -> MeasureEMDOutput:
         """Run EMD calculation.

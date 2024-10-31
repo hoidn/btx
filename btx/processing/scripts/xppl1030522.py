@@ -66,7 +66,7 @@ config = {
     },
     'load_data': {
         'roi': (130, 290, 95, 340), 
-        'energy_filter': [9.0, 5.0],
+        'energy_filter': [9.0, 5.0, 9.0, float('inf')],
         'i0_threshold': 1500,
         'time_bin': 2.0,
         'time_tool': [0.0, 0.015]
@@ -88,9 +88,7 @@ config = {
     },
     'pump_probe_analysis': {
         'min_count': 2,                # Minimum frames per delay bin
-        'significance_level': 0.05,     # P-value threshold for significance
-        'Emin': 9.0,                   # Minimum energy threshold (keV)
-        'Emax': float('inf')           # Maximum energy threshold (keV)
+        'significance_level': 0.05      # P-value threshold for significance
     }
 }
 

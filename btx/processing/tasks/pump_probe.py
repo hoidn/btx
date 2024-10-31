@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Dict, List, Tuple, Any, NamedTuple
+from typing import Dict, List, Tuple, Any, NamedTuple, Optional
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
@@ -7,9 +7,16 @@ import matplotlib.pyplot as plt
 from btx.processing.btx_types import (
     PumpProbeAnalysisInput,
     PumpProbeAnalysisOutput,
-    LoadDataOutput,
-    BuildPumpProbeMasksOutput
 )
+
+try:
+    from line_profiler import profile
+    PROFILING = True
+except ImportError:
+    # Create no-op decorator if line_profiler isn't installed
+    def profile(func):
+        return func
+    PROFILING = False
 
 import warnings
 import logging
@@ -57,17 +64,16 @@ class DelayData(NamedTuple):
 class PumpProbeAnalysis:
     """Analyze pump-probe time series data with proper error propagation."""
     
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], enable_profiling: bool = False):
         """Initialize pump-probe analysis task.
         
         Args:
             config: Dictionary containing:
                 - pump_probe_analysis.min_count: Minimum frames per delay bin
                 - pump_probe_analysis.significance_level: P-value threshold
-                - pump_probe_analysis.Emin: Minimum energy threshold (keV)
-                - pump_probe_analysis.Emax: Maximum energy threshold (keV)
         """
         self.config = config
+        self.input_data = None  # Store input data for diagnostics
         
         # Set defaults
         if 'pump_probe_analysis' not in self.config:
@@ -78,24 +84,9 @@ class PumpProbeAnalysis:
             analysis_config['min_count'] = 2
         if 'significance_level' not in analysis_config:
             analysis_config['significance_level'] = 0.05
-        if 'Emin' not in analysis_config:
-            analysis_config['Emin'] = 7.0
-        if 'Emax' not in analysis_config:
-            analysis_config['Emax'] = float('inf')
 
-    def _make_energy_filter(self, frames: np.ndarray) -> np.ndarray:
-        """Create energy filter mask based on config parameters.
-        
-        Args:
-            frames: Input frames to filter
-            
-        Returns:
-            Boolean mask for energy filtering
-        """
-        Emin = self.config['pump_probe_analysis']['Emin']
-        Emax = self.config['pump_probe_analysis']['Emax']
-        return (frames >= Emin) & (frames <= Emax)
 
+    #@profile
     def _group_by_delay(
         self, 
         input_data: PumpProbeAnalysisInput
@@ -149,12 +140,13 @@ class PumpProbeAnalysis:
             
             if n_on >= min_count and n_off >= min_count:
                 logger.debug(f"Delay {delay:.3f}ps: {n_on} on, {n_off} off frames")
+                # TODO default to the other stack of frames if this one is None
                 stacks_on[delay] = DelayData(
-                    frames=input_data.load_data_output.data[on_mask],
+                    frames=input_data.load_data_output.data_global_energy_filter[on_mask],
                     I0=input_data.load_data_output.I0[on_mask]
                 )
                 stacks_off[delay] = DelayData(
-                    frames=input_data.load_data_output.data[off_mask],
+                    frames=input_data.load_data_output.data_global_energy_filter[off_mask],
                     I0=input_data.load_data_output.I0[off_mask]
                 )
             else:
@@ -167,6 +159,7 @@ class PumpProbeAnalysis:
         
         return stacks_on, stacks_off
 
+    #@profile
     def _calculate_signals(
         self,
         frames: np.ndarray,
@@ -185,13 +178,9 @@ class PumpProbeAnalysis:
         Returns:
             Tuple of (normalized_signal, normalized_background, variance)
         """
-        # Apply energy filter
-        energy_mask = self._make_energy_filter(frames)
-        filtered_frames = frames * energy_mask
-        
-        # Calculate per-frame sums
-        signal_sums = np.sum(filtered_frames * signal_mask[None, :, :], axis=(1,2))
-        bg_sums = np.sum(filtered_frames * bg_mask[None, :, :], axis=(1,2))
+        # Calculate per-frame sums using einsum for better performance
+        signal_sums = np.einsum('ijk,jk->i', frames, signal_mask)
+        bg_sums = np.einsum('ijk,jk->i', frames, bg_mask)
         
         # Scale background by mask sizes
         scale_factor = np.sum(signal_mask) / np.sum(bg_mask)
@@ -215,29 +204,7 @@ class PumpProbeAnalysis:
         
         return signal_mean, bg_mean, variance
 
-    def process(
-        self,
-        config: Dict[str, Any],
-        load_data_output: LoadDataOutput,
-        masks_output: BuildPumpProbeMasksOutput
-    ) -> PumpProbeAnalysisOutput:
-        """Process pump-probe analysis with raw inputs.
-        
-        Args:
-            config: Configuration dictionary
-            load_data_output: Output from LoadData task
-            masks_output: Output from BuildPumpProbeMasks task
-            
-        Returns:
-            PumpProbeAnalysisOutput with calculated signals and uncertainties
-        """
-        input_data = PumpProbeAnalysisInput(
-            config=config,
-            load_data_output=load_data_output,
-            masks_output=masks_output
-        )
-        return self.run(input_data)
-
+    @profile
     def run(self, input_data: PumpProbeAnalysisInput) -> PumpProbeAnalysisOutput:
         """Run pump-probe analysis with corrected error propagation.
         
@@ -246,18 +213,9 @@ class PumpProbeAnalysis:
             
         Returns:
             PumpProbeAnalysisOutput with calculated signals and uncertainties
-            
-        .. deprecated:: 2.0.0
-           Use process() instead. This method will be removed in a future version.
         """
-        import warnings
-        warnings.warn(
-            "The run() method is deprecated. Use process() instead.",
-            DeprecationWarning,
-            stacklevel=2
-        )
-        
-        # Store masks for diagnostics
+        # Store input data and masks for diagnostics
+        self.input_data = input_data
         self.signal_mask = input_data.masks_output.signal_mask
         self.bg_mask = input_data.masks_output.background_mask
         
@@ -328,10 +286,12 @@ class PumpProbeAnalysis:
             n_frames_per_delay=n_frames
         )
 
+    @profile
     def plot_diagnostics(
         self,
         output: PumpProbeAnalysisOutput,
-        save_dir: Path
+        save_dir: Path,
+        detailed_diagnostics: bool = False
     ) -> None:
         """Generate diagnostic plots with proper infinity handling."""
         save_dir.mkdir(parents=True, exist_ok=True)
@@ -347,42 +307,33 @@ class PumpProbeAnalysis:
         # Create four-panel overview figure
         fig = plt.figure(figsize=(16, 16))
         
-        # Get all frames from all delays for intensity maps
-        all_frames = np.concatenate([
-            np.concatenate([self.stacks_on[d].frames, self.stacks_off[d].frames])
-            for d in output.delays
-        ])
-        
-        # 1. Total counts map (top left)
-        ax1 = fig.add_subplot(221)
-        total_counts = np.sum(all_frames, axis=0)
-        im1 = ax1.imshow(total_counts, origin='lower', cmap='viridis')
-        ax1.set_title('Total Counts Map')
-        plt.colorbar(im1, ax=ax1)
-        
-        # 2. Energy filtered map (top right)
-        ax2 = fig.add_subplot(222)
-        energy_mask = self._make_energy_filter(all_frames)
-        filtered_counts = np.sum(all_frames * energy_mask, axis=0)
-        im2 = ax2.imshow(filtered_counts, origin='lower', cmap='viridis')
-        ax2.set_title(f'Energy Filtered Map (Emin={self.config["pump_probe_analysis"]["Emin"]}, Emax={self.config["pump_probe_analysis"]["Emax"]})')
-        plt.colorbar(im2, ax=ax2)
-        
-        # 3. Time traces with error bars (bottom left)
-        ax3 = fig.add_subplot(223)
-        ax3.errorbar(output.delays, output.signals_on,
+        if self.input_data is None:
+            raise RuntimeError("plot_diagnostics() called before run()")
+            
+        # 1. Time traces with error bars (top left)
+        ax2 = fig.add_subplot(221)
+        ax2.errorbar(output.delays, output.signals_on,
                     yerr=output.std_devs_on, fmt='rs-',
                     label='Laser On', capsize=3)
-        ax3.errorbar(output.delays, output.signals_off,
+        ax2.errorbar(output.delays, output.signals_off,
                     yerr=output.std_devs_off, fmt='ks-',
                     label='Laser Off', capsize=3, alpha=0.5)
-        ax3.set_xlabel('Time Delay (ps)')
-        ax3.set_ylabel('Normalized Signal')
-        ax3.legend()
-        ax3.grid(True)
+        ax2.set_xlabel('Time Delay (ps)')
+        ax2.set_ylabel('Normalized Signal')
+        ax2.legend()
+        ax2.grid(True)
         
-        # 4. Statistical significance (bottom right)
-        ax4 = fig.add_subplot(224)
+        # 2. Signal and background masks (top right)
+        ax3 = fig.add_subplot(222)
+        mask_display = np.zeros_like(self.signal_mask, dtype=float)
+        mask_display[self.signal_mask] = 1
+        mask_display[self.bg_mask] = 0.5
+        im3 = ax3.imshow(mask_display, origin='lower', cmap='viridis')
+        ax3.set_title('Analysis Masks (Signal=1, Background=0.5)')
+        plt.colorbar(im3, ax=ax3)
+        
+        # 3. Statistical significance (bottom right)
+        ax4 = fig.add_subplot(223)
         
         # Convert p-values to log scale with capped infinities
         max_log_p = 16  # Maximum value to show on plot
@@ -417,33 +368,35 @@ class PumpProbeAnalysis:
         plt.savefig(save_dir / 'overview_diagnostics.png')
         plt.close()
 
-        # Plot detailed diagnostics for selected delay points
-        delay_indices = [0, len(output.delays)//2, -1]  # First, middle, and last delays
-        for idx in delay_indices:
-            delay = output.delays[idx]
+        # Plot detailed diagnostics if enabled
+        if detailed_diagnostics:
+            logger.info("Generating detailed diagnostics plots...")
+            delay_indices = [0, len(output.delays)//2, -1]  # First, middle, and last delays
+            for idx in delay_indices:
+                delay = output.delays[idx]
+                
+                # Get data from stored stacks
+                frames_on = self.stacks_on[delay].frames
+                frames_off = self.stacks_off[delay].frames
+                I0_on = self.stacks_on[delay].I0
+                I0_off = self.stacks_off[delay].I0
+                
+                # Calculate statistics
+                signal_sums_on = np.sum(frames_on * self.signal_mask[None, :, :], axis=(1,2))
+                signal_sums_off = np.sum(frames_off * self.signal_mask[None, :, :], axis=(1,2))
+                bg_sums_on = np.sum(frames_on * self.bg_mask[None, :, :], axis=(1,2))
+                bg_sums_off = np.sum(frames_off * self.bg_mask[None, :, :], axis=(1,2))
+                
+                scale_factor = np.sum(self.signal_mask) / np.sum(self.bg_mask)
+                net_signal_on = (signal_sums_on - scale_factor * bg_sums_on) / np.mean(I0_on)
+                net_signal_off = (signal_sums_off - scale_factor * bg_sums_off) / np.mean(I0_off)
             
-            # Get data from stored stacks
-            frames_on = self.stacks_on[delay].frames
-            frames_off = self.stacks_off[delay].frames
-            I0_on = self.stacks_on[delay].I0
-            I0_off = self.stacks_off[delay].I0
-            
-            # Calculate statistics
-            signal_sums_on = np.sum(frames_on * self.signal_mask[None, :, :], axis=(1,2))
-            signal_sums_off = np.sum(frames_off * self.signal_mask[None, :, :], axis=(1,2))
-            bg_sums_on = np.sum(frames_on * self.bg_mask[None, :, :], axis=(1,2))
-            bg_sums_off = np.sum(frames_off * self.bg_mask[None, :, :], axis=(1,2))
-            
-            scale_factor = np.sum(self.signal_mask) / np.sum(self.bg_mask)
-            net_signal_on = (signal_sums_on - scale_factor * bg_sums_on) / np.mean(I0_on)
-            net_signal_off = (signal_sums_off - scale_factor * bg_sums_off) / np.mean(I0_off)
-            
-            # Create detailed diagnostic figure
-            fig, axes = plt.subplots(3, 2, figsize=(15, 18))
-            fig.suptitle(f'Detailed Diagnostics for Delay {delay:.2f} ps', fontsize=16)
-            
-            # Raw signal distributions
-            axes[0,0].hist(signal_sums_on, bins='auto', alpha=0.5, label='Laser On')
+                # Create detailed diagnostic figure
+                fig, axes = plt.subplots(3, 2, figsize=(15, 18))
+                fig.suptitle(f'Detailed Diagnostics for Delay {delay:.2f} ps', fontsize=16)
+                
+                # Raw signal distributions
+                axes[0,0].hist(signal_sums_on, bins='auto', alpha=0.5, label='Laser On')
             axes[0,0].hist(signal_sums_off, bins='auto', alpha=0.5, label='Laser Off')
             axes[0,0].set_title('Raw Signal Distributions')
             axes[0,0].set_xlabel('Integrated Signal')
