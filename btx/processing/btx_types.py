@@ -21,7 +21,7 @@ class LoadDataOutput:
     laser_on_mask: np.ndarray  # (frames,)
     laser_off_mask: np.ndarray  # (frames,)
     binned_delays: np.ndarray  # (frames,)
-    data_dual_energy_filter: Optional[np.ndarray] = None  # Optional (frames,) boolean array
+    data_global_energy_filter: Optional[np.ndarray] = None  # Optional (frames,) boolean array
 
 @dataclass
 class MakeHistogramInput:

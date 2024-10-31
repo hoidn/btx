@@ -140,12 +140,13 @@ class PumpProbeAnalysis:
             
             if n_on >= min_count and n_off >= min_count:
                 logger.debug(f"Delay {delay:.3f}ps: {n_on} on, {n_off} off frames")
+                # TODO default to the other stack of frames if this one is None
                 stacks_on[delay] = DelayData(
-                    frames=input_data.load_data_output.data[on_mask],
+                    frames=input_data.load_data_output.data_global_energy_filter[on_mask],
                     I0=input_data.load_data_output.I0[on_mask]
                 )
                 stacks_off[delay] = DelayData(
-                    frames=input_data.load_data_output.data[off_mask],
+                    frames=input_data.load_data_output.data_global_energy_filter[off_mask],
                     I0=input_data.load_data_output.I0[off_mask]
                 )
             else:

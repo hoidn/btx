@@ -83,7 +83,8 @@ class LoadData:
         # Apply both filters
         data_cleaned = data.copy()
         data_cleaned[~harmonic_mask] = 0
-        data[~(harmonic_mask & global_mask)] = 0
+        #data[~(harmonic_mask & global_mask)] = 0
+        data[~(global_mask)] = 0
         
         return data_cleaned, data
 
@@ -169,7 +170,7 @@ class LoadData:
             )
             
         # Apply energy thresholding
-        data, data_dual_energy_filter = self._apply_energy_threshold(data)
+        data, data_global_energy_filter = self._apply_energy_threshold(data)
     
         # Calculate binned delays
         binned_delays = self._calculate_binned_delays(laser_delays)
@@ -181,7 +182,7 @@ class LoadData:
             laser_on_mask=laser_on_mask,
             laser_off_mask=laser_off_mask,
             binned_delays=binned_delays,
-            data_dual_energy_filter=data_dual_energy_filter
+            data_global_energy_filter=data_global_energy_filter
         )
 
     def plot_diagnostics(self, output: LoadDataOutput, save_dir: Path) -> None:
