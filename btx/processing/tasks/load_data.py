@@ -42,6 +42,7 @@ class LoadData:
         """
         self.config = config
         
+    @profile
     def _apply_energy_threshold(self, data: np.ndarray):
         """Apply energy thresholding to the data.
         

@@ -1,4 +1,4 @@
-ohoidn@sdfiana004:~/xcsl1008222/results/ohoidn/btx $ idn@sdfiana004:~/xcsl1008222/results/ohoidn/btx 
+ohoidn@sdfiana004:~/xcsl1008222/results/ohoidn/btxohoidn@sdfiana004:~/xcsl1008222/results/ohoidn/btx 
 2.pyrnprof -l -v btx/processing/scripts/xppl1030522
 Loading data from /sdf/data/lcls/ds/xpp/xppx1003221/results/ohoidn/Shift 4/processed_data/run0190_ext
 racted.npz
@@ -36,13 +36,13 @@ Creating histogram...
 Measuring EMD...
 
 Calculating p-values...
-Found 8263 significant pixels (p < 0.050, 26.5% of total)
+Found 8316 significant pixels (p < 0.050, 26.7% of total)
 
 Building masks...
 
 Mask Statistics:
-Signal mask: 6839 pixels (21.9% of image)
-Background mask: 13818 pixels (44.3% of image)
+Signal mask: 6941 pixels (22.2% of image)
+Background mask: 13916 pixels (44.6% of image)
 Minimum distance between masks: 4.2 pixels
 /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/build_pump_probe_masks.py:4
 36: UserWarning: The following kwargs were not used by contour: 'label'
@@ -56,16 +56,16 @@ arning: divide by zero encountered in log10
 Processing complete! Results saved in: pipeline_results
 
 Key Results:
-Number of significant pixels: 8263
-Signal mask size: 6839 pixels
-Background mask size: 13818 pixels
+Number of significant pixels: 8316
+Signal mask size: 6941 pixels
+Background mask size: 13916 pixels
 Number of delay points: 31
 Mean I0 (laser on): 5100.0
 Mean I0 (laser off): 4439.7
 Wrote profile results to xppl1030522.py.lprof
 Timer unit: 1e-06 s
 
-Total time: 0.122348 s
+Total time: 0.119009 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/build_pump_probe_mask
 s.py
 Function: run at line 314
@@ -77,71 +77,71 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 ut) -> BuildPumpProbeMasksOutput:
    316                                                   """Run mask generation."""
    317                                                   # Validate inputs
-   318         1          3.2      3.2      0.0          self._validate_inputs(input_data)
+   318         1         13.4     13.4      0.0          self._validate_inputs(input_data)
    319                                                   
    320                                                   # Get parameters
-   321         1          1.4      1.4      0.0          mask_config = self.config['generate_masks']
+   321         1          1.8      1.8      0.0          mask_config = self.config['generate_masks']
    322         1          1.3      1.3      0.0          threshold = mask_config['threshold']
-   323         1          0.6      0.6      0.0          bg_mult = mask_config['bg_mask_mult']
-   324         1          0.6      0.6      0.0          thickness = mask_config['bg_mask_thickness']
-   325         1          2.0      2.0      0.0          x1, x2, y1, y2 = self.config['setup']['backg
+   323         1          1.0      1.0      0.0          bg_mult = mask_config['bg_mask_mult']
+   324         1          1.1      1.1      0.0          thickness = mask_config['bg_mask_thickness']
+   325         1          2.6      2.6      0.0          x1, x2, y1, y2 = self.config['setup']['backg
 round_roi_coords']
    326                                                   
    327                                                   # Get data
    328         1          1.4      1.4      0.0          p_values = input_data.p_values_output.p_valu
 es
-   329         1          1.6      1.6      0.0          histograms = input_data.histogram_output.his
+   329         1          9.3      9.3      0.0          histograms = input_data.histogram_output.his
 tograms
    330                                                   
    331                                                   # 1. Initial ROI cluster identification
-   332         2        812.3    406.2      0.7          _, roi_cluster = self._identify_roi_connecte
+   332         2        760.8    380.4      0.6          _, roi_cluster = self._identify_roi_connecte
 d_cluster(
-   333         1          0.4      0.4      0.0              p_values, threshold, x1, x2, y1, y2
+   333         1          0.3      0.3      0.0              p_values, threshold, x1, x2, y1, y2
    334                                                   )
    335                                                   
    336                                                   # 2. Filter negative clusters
-   337         2       4286.9   2143.5      3.5          filtered_mask = self._filter_negative_cluste
+   337         2       6820.7   3410.3      5.7          filtered_mask = self._filter_negative_cluste
 rs(
-   338         1          0.4      0.4      0.0              roi_cluster, histograms, min_size=10
+   338         1          1.0      1.0      0.0              roi_cluster, histograms, min_size=10
    339                                                   )
    340                                                   
    341                                                   # 3. Infill to get final signal mask
-   342         1      77401.7  77401.7     63.3          final_signal_mask = self._infill_binary_arra
+   342         1      73613.7  73613.7     61.9          final_signal_mask = self._infill_binary_arra
 y(histograms, filtered_mask)
    343                                                   
    344                                                   # 4. Generate background mask
-   345         2      37442.9  18721.5     30.6          background_mask = self._create_background_ma
+   345         2      35479.8  17739.9     29.8          background_mask = self._create_background_ma
 sk(
-   346         1          0.4      0.4      0.0              final_signal_mask,
+   346         1          1.0      1.0      0.0              final_signal_mask,
    347         1          0.7      0.7      0.0              bg_mask_mult=bg_mult,
-   348         1          0.5      0.5      0.0              thickness=thickness,
-   349         1          0.7      0.7      0.0              separator_thickness=5
+   348         1          0.3      0.3      0.0              thickness=thickness,
+   349         1          0.4      0.4      0.0              separator_thickness=5
    350                                                   )
    351                                                   
    352                                                   # 5. Validate masks
-   353         1        115.3    115.3      0.1          self._validate_masks(final_signal_mask, back
+   353         1        130.3    130.3      0.1          self._validate_masks(final_signal_mask, back
 ground_mask)
    354                                                   
    355                                                   # 6. Print statistics
-   356         1       2252.0   2252.0      1.8          self._print_mask_statistics(final_signal_mas
+   356         1       2145.5   2145.5      1.8          self._print_mask_statistics(final_signal_mas
 k, background_mask)
    357                                                   
    358                                                   # Store intermediate results
-   359         2         12.1      6.0      0.0          intermediate_masks = SignalMaskStages(
-   360         1          0.4      0.4      0.0              initial=roi_cluster,
-   361         1          0.4      0.4      0.0              roi_masked=filtered_mask,
+   359         2         13.3      6.7      0.0          intermediate_masks = SignalMaskStages(
+   360         1          0.3      0.3      0.0              initial=roi_cluster,
+   361         1          0.8      0.8      0.0              roi_masked=filtered_mask,
    362         1          0.2      0.2      0.0              filtered=filtered_mask,  # Reuse since f
 iltering is different now
    363         1          0.2      0.2      0.0              final=final_signal_mask
    364                                                   )
    365                                                   
-   366         2          7.1      3.6      0.0          return BuildPumpProbeMasksOutput(
-   367         1          0.3      0.3      0.0              signal_mask=final_signal_mask,
-   368         1          0.6      0.6      0.0              background_mask=background_mask,
+   366         2          6.9      3.4      0.0          return BuildPumpProbeMasksOutput(
+   367         1          0.7      0.7      0.0              signal_mask=final_signal_mask,
+   368         1          0.3      0.3      0.0              background_mask=background_mask,
    369         1          0.2      0.2      0.0              intermediate_masks=intermediate_masks
    370                                                   )
 
-Total time: 0.678718 s
+Total time: 0.59759 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/calculate_p_values.py
 Function: run at line 64
 
@@ -163,107 +163,169 @@ es and derived data
     74                                                   Raises:
     75                                                       ValueError: If input data is invalid
     76                                                   """
-    77         1          3.3      3.3      0.0          emd_values = input_data.emd_output.emd_value
+    77         1          2.7      2.7      0.0          emd_values = input_data.emd_output.emd_value
 s
-    78         1          1.7      1.7      0.0          null_distribution = input_data.emd_output.nu
+    78         1          1.4      1.4      0.0          null_distribution = input_data.emd_output.nu
 ll_distribution
     79                                                   
     80                                                   # Calculate p-values
-    81         1     678231.5 678231.5     99.9          p_values = self._calculate_p_values(emd_valu
+    81         1     597098.3 597098.3     99.9          p_values = self._calculate_p_values(emd_valu
 es, null_distribution)
     82                                                   
     83                                                   # Calculate -log10(p-values) for visualizati
 on
     84                                                   # Handle zeros by using minimum possible p-v
 alue
-    85         1          3.8      3.8      0.0          min_p_value = 1.0 / (len(null_distribution) 
+    85         1          3.6      3.6      0.0          min_p_value = 1.0 / (len(null_distribution) 
 + 1)
-    86         1        244.1    244.1      0.0          log_p_values = -np.log10(np.maximum(p_values
+    86         1        172.3    172.3      0.0          log_p_values = -np.log10(np.maximum(p_values
 , min_p_value))
     87                                                   
     88                                                   # Get significance threshold
-    89         1          4.7      4.7      0.0          threshold = self.config['calculate_pvalues']
+    89         1          8.5      8.5      0.0          threshold = self.config['calculate_pvalues']
 ['significance_threshold']
     90                                                   
     91                                                   # Print some statistics
-    92         1        130.1    130.1      0.0          n_significant = np.sum(p_values < threshold)
-    93         3         73.4     24.5      0.0          print(f"Found {n_significant} significant pi
+    92         1        166.1    166.1      0.0          n_significant = np.sum(p_values < threshold)
+    93         3        107.2     35.7      0.0          print(f"Found {n_significant} significant pi
 xels "
-    94         2          4.3      2.1      0.0                f"(p < {threshold:.3f}, {n_significant
+    94         2          4.1      2.0      0.0                f"(p < {threshold:.3f}, {n_significant
 /p_values.size:.1%} of total)")
     95                                                   
-    96         2         18.1      9.1      0.0          return CalculatePValuesOutput(
-    97         1          1.5      1.5      0.0              p_values=p_values,
-    98         1          1.0      1.0      0.0              log_p_values=log_p_values,
-    99         1          0.7      0.7      0.0              significance_threshold=threshold
+    96         2         23.9     11.9      0.0          return CalculatePValuesOutput(
+    97         1          0.9      0.9      0.0              p_values=p_values,
+    98         1          0.8      0.8      0.0              log_p_values=log_p_values,
+    99         1          0.3      0.3      0.0              significance_threshold=threshold
    100                                                   )
 
-Total time: 31.8329 s
+Total time: 11.3794 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/load_data.py
-Function: run at line 143
+Function: _apply_energy_threshold at line 45
 
 Line #      Hits         Time  Per Hit   % Time  Line Contents
 ==============================================================
-   143                                               @profile
-   144                                               def run(self, input_data: LoadDataInput) -> Load
-DataOutput:
-   145                                                   """Run the data loading and preprocessing.""
-"
-   146         1          9.0      9.0      0.0          if input_data.data is not None:
-   147                                                       # Use provided synthetic data
-   148         1          2.3      2.3      0.0              data = input_data.data
-   149         1          8.0      8.0      0.0              I0 = input_data.I0
-   150         1         14.3     14.3      0.0              laser_delays = input_data.laser_delays
-   151         1         15.1     15.1      0.0              laser_on_mask = input_data.laser_on_mask
-   152         1         14.3     14.3      0.0              laser_off_mask = input_data.laser_off_ma
-sk
-   153                                                   else:
-   154                                                       # Load from file using get_imgs_thresh
-   155                                                       try:
-   156                                                           from btx.processing.xpploader import
- get_imgs_thresh
-   157                                                       except ImportError:
-   158                                                           print("Note: get_imgs_thresh not ava
-ilable, only synthetic data mode supported")
-   159                                                           raise
-   160                                                           
-   161                                                       data, I0, laser_delays, laser_on_mask, l
-aser_off_mask = get_imgs_thresh(
-   162                                                           self.config['setup']['run'],
-   163                                                           self.config['setup']['exp'],
-   164                                                           self.config['load_data']['roi'],
-   165                                                           self.config['load_data'].get('energy
-_filter', [8.8, 5, 0, float('inf')]),
-   166                                                           self.config['load_data'].get('i0_thr
-eshold', 200),
-   167                                                           self.config['load_data'].get('ipm_po
-s_filter', [0.2, 0.5]),
-   168                                                           self.config['load_data'].get('time_b
-in', 2),
-   169                                                           self.config['load_data'].get('time_t
-ool', [0., 0.005])
-   170                                                       )
-   171                                                       
-   172                                                   # Apply energy thresholding
-   173         1   31819181.3    3e+07    100.0          data, data_global_energy_filter = self._appl
-y_energy_threshold(data)
-   174                                               
-   175                                                   # Calculate binned delays
-   176         1      13603.7  13603.7      0.0          binned_delays = self._calculate_binned_delay
-s(laser_delays)
-   177                                               
-   178         2         56.7     28.3      0.0          return LoadDataOutput(
-   179         1          0.5      0.5      0.0              data=data,
-   180         1          0.3      0.3      0.0              I0=I0,
-   181         1          0.3      0.3      0.0              laser_delays=laser_delays,
-   182         1          0.5      0.5      0.0              laser_on_mask=laser_on_mask,
-   183         1          0.6      0.6      0.0              laser_off_mask=laser_off_mask,
-   184         1          0.2      0.2      0.0              binned_delays=binned_delays,
-   185         1          0.3      0.3      0.0              data_global_energy_filter=data_global_en
-ergy_filter
-   186                                                   )
+    45                                               @profile
+    46                                               def _apply_energy_threshold(self, data: np.ndarr
+ay):
+    47                                                   """Apply energy thresholding to the data.
+    48                                                   
+    49                                                   Args:
+    50                                                       data: Input image data array
+    51                                                       
+    52                                                   Returns:
+    53                                                       Thresholded image data array with values
+ set to 0 if they:
+    54                                                       1. Fall outside the harmonic bands defin
+ed by [E0 ± dE, 2E0 ± dE, 3E0 ± dE]
+    55                                                       2. Fall outside the global range [Emin, 
+Emax]
+    56                                                   """
+    57         1         10.1     10.1      0.0          E0, dE, Emin, Emax = self.config['load_data'
+]['energy_filter']
+    58                                                   
+    59         1         10.2     10.2      0.0          def _calc_masks():
+    60                                                       """Numexpr implementation"""
+    61                                                       local_dict = {
+    62                                                           'data': data,
+    63                                                           'E0': E0,
+    64                                                           'dE': dE,
+    65                                                           'Emin': Emin,
+    66                                                           'Emax': Emax
+    67                                                       }
+    68                                                       
+    69                                                       harmonic_mask = ne.evaluate(
+    70                                                           "(data >= (E0 - dE)) & (data <= (E0 
++ dE)) |"
+    71                                                           "(data >= (2*E0 - dE)) & (data <= (2
+*E0 + dE)) |"
+    72                                                           "(data >= (3*E0 - dE)) & (data <= (3
+*E0 + dE))",
+    73                                                           local_dict=local_dict
+    74                                                       )
+    75                                                       
+    76                                                       global_mask = ne.evaluate("(data > Emin)
+ & (data <= Emax)", 
+    77                                                                               local_dict=local
+_dict)
+    78                                                       return harmonic_mask, global_mask
+    79                                           
+    80                                                   # Calculate masks using numexpr
+    81         1    4379829.5    4e+06     38.5          harmonic_mask, global_mask = _calc_masks()
+    82                                                   
+    83                                                   # Apply both filters
+    84         1    2501082.4    3e+06     22.0          data_cleaned = data.copy()
+    85         1    2380142.6    2e+06     20.9          data_cleaned[~harmonic_mask] = 0
+    86                                                   #data[~(harmonic_mask & global_mask)] = 0
+    87         1    2118295.8    2e+06     18.6          data[~(global_mask)] = 0
+    88                                                   
+    89         1          2.4      2.4      0.0          return data_cleaned, data
 
-Total time: 13.2223 s
+Total time: 11.395 s
+File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/load_data.py
+Function: run at line 144
+
+Line #      Hits         Time  Per Hit   % Time  Line Contents
+==============================================================
+   144                                               @profile
+   145                                               def run(self, input_data: LoadDataInput) -> Load
+DataOutput:
+   146                                                   """Run the data loading and preprocessing.""
+"
+   147         1         12.8     12.8      0.0          if input_data.data is not None:
+   148                                                       # Use provided synthetic data
+   149         1          4.4      4.4      0.0              data = input_data.data
+   150         1          4.1      4.1      0.0              I0 = input_data.I0
+   151         1          6.0      6.0      0.0              laser_delays = input_data.laser_delays
+   152         1          5.8      5.8      0.0              laser_on_mask = input_data.laser_on_mask
+   153         1          2.6      2.6      0.0              laser_off_mask = input_data.laser_off_ma
+sk
+   154                                                   else:
+   155                                                       # Load from file using get_imgs_thresh
+   156                                                       try:
+   157                                                           from btx.processing.xpploader import
+ get_imgs_thresh
+   158                                                       except ImportError:
+   159                                                           print("Note: get_imgs_thresh not ava
+ilable, only synthetic data mode supported")
+   160                                                           raise
+   161                                                           
+   162                                                       data, I0, laser_delays, laser_on_mask, l
+aser_off_mask = get_imgs_thresh(
+   163                                                           self.config['setup']['run'],
+   164                                                           self.config['setup']['exp'],
+   165                                                           self.config['load_data']['roi'],
+   166                                                           self.config['load_data'].get('energy
+_filter', [8.8, 5, 0, float('inf')]),
+   167                                                           self.config['load_data'].get('i0_thr
+eshold', 200),
+   168                                                           self.config['load_data'].get('ipm_po
+s_filter', [0.2, 0.5]),
+   169                                                           self.config['load_data'].get('time_b
+in', 2),
+   170                                                           self.config['load_data'].get('time_t
+ool', [0., 0.005])
+   171                                                       )
+   172                                                       
+   173                                                   # Apply energy thresholding
+   174         1   11385186.5    1e+07     99.9          data, data_global_energy_filter = self._appl
+y_energy_threshold(data)
+   175                                               
+   176                                                   # Calculate binned delays
+   177         1       9726.8   9726.8      0.1          binned_delays = self._calculate_binned_delay
+s(laser_delays)
+   178                                               
+   179         2         36.7     18.3      0.0          return LoadDataOutput(
+   180         1          0.2      0.2      0.0              data=data,
+   181         1          0.3      0.3      0.0              I0=I0,
+   182         1          0.4      0.4      0.0              laser_delays=laser_delays,
+   183         1          0.3      0.3      0.0              laser_on_mask=laser_on_mask,
+   184         1          0.4      0.4      0.0              laser_off_mask=laser_off_mask,
+   185         1          0.2      0.2      0.0              binned_delays=binned_delays,
+   186         1          0.2      0.2      0.0              data_global_energy_filter=data_global_en
+ergy_filter
+   187                                                   )
+
+Total time: 11.271 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/make_histogram.py
 Function: run at line 132
 
@@ -282,32 +344,32 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
 s and bin information
    141                                                   """
    142         1          1.1      1.1      0.0          hist_config = self.config['make_histogram']
-   143         1         23.4     23.4      0.0          bin_boundaries = np.array(hist_config['bin_b
+   143         1         13.4     13.4      0.0          bin_boundaries = np.array(hist_config['bin_b
 oundaries'])
-   144         1          0.7      0.7      0.0          hist_start_bin = hist_config['hist_start_bin
+   144         1          0.4      0.4      0.0          hist_start_bin = hist_config['hist_start_bin
 ']
    145                                                   
-   146         1          0.6      0.6      0.0          data = input_data.load_data_output.data
+   146         1          0.5      0.5      0.0          data = input_data.load_data_output.data
    147                                                   
-   148         2   13222046.8    7e+06    100.0          histograms = self._calculate_histograms(
-   149         1          0.2      0.2      0.0              data,
-   150         1          0.2      0.2      0.0              bin_boundaries,
+   148         2   11270904.4    6e+06    100.0          histograms = self._calculate_histograms(
+   149         1          0.3      0.3      0.0              data,
+   150         1          0.3      0.3      0.0              bin_boundaries,
    151         1          0.2      0.2      0.0              hist_start_bin
    152                                                   )
    153                                                   
    154                                                   # Calculate bin edges and centers correctly
-   155         1         15.5     15.5      0.0          bin_edges = bin_boundaries[hist_start_bin:-1
+   155         1          7.3      7.3      0.0          bin_edges = bin_boundaries[hist_start_bin:-1
 ]  # Exclude the last edge
-   156         1        117.3    117.3      0.0          bin_centers = (bin_boundaries[hist_start_bin
+   156         1         60.1     60.1      0.0          bin_centers = (bin_boundaries[hist_start_bin
 :-1] + bin_boundaries[hist_start_bin+1:]) / 2
    157                                                   
-   158         2         42.5     21.3      0.0          return MakeHistogramOutput(
-   159         1          1.0      1.0      0.0              histograms=histograms,
-   160         1          1.1      1.1      0.0              bin_edges=bin_edges,
-   161         1          0.4      0.4      0.0              bin_centers=bin_centers
+   158         2         16.6      8.3      0.0          return MakeHistogramOutput(
+   159         1          0.8      0.8      0.0              histograms=histograms,
+   160         1          0.8      0.8      0.0              bin_edges=bin_edges,
+   161         1          0.2      0.2      0.0              bin_centers=bin_centers
    162                                                   )
 
-Total time: 1.91593 s
+Total time: 1.51015 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/make_histogram.py
 Function: plot_diagnostics at line 164
 
@@ -322,41 +384,41 @@ Output, save_dir: Path) -> None:
    169                                                       output: Histogram calculation output
    170                                                       save_dir: Directory to save plots
    171                                                   """
-   172         1       1031.5   1031.5      0.1          save_dir.mkdir(parents=True, exist_ok=True)
+   172         1        552.6    552.6      0.0          save_dir.mkdir(parents=True, exist_ok=True)
    173                                                   
    174                                                   # Create figure with subplots
-   175         1      14899.8  14899.8      0.8          fig = plt.figure(figsize=(12, 5))
+   175         1       8175.6   8175.6      0.5          fig = plt.figure(figsize=(12, 5))
    176                                                   
    177                                                   # 1. Mean histogram across all pixels (log s
 cale)
-   178         1      46831.4  46831.4      2.4          ax1 = fig.add_subplot(121)
-   179         1       3994.5   3994.5      0.2          mean_hist = np.mean(output.histograms, axis=
+   178         1      36115.7  36115.7      2.4          ax1 = fig.add_subplot(121)
+   179         1       2704.6   2704.6      0.2          mean_hist = np.mean(output.histograms, axis=
 (1, 2))
-   180         1       3914.2   3914.2      0.2          ax1.semilogy(output.bin_centers, mean_hist, 
+   180         1       2331.5   2331.5      0.2          ax1.semilogy(output.bin_centers, mean_hist, 
 'b-')
-   181         1        385.6    385.6      0.0          ax1.set_title('Mean Histogram Across Pixels 
+   181         1        364.6    364.6      0.0          ax1.set_title('Mean Histogram Across Pixels 
 (Log Scale)')
-   182         1        128.5    128.5      0.0          ax1.set_xlabel('Value')
-   183         1        159.4    159.4      0.0          ax1.set_ylabel('Counts')
-   184         1       1147.7   1147.7      0.1          ax1.grid(True)
+   182         1         89.1     89.1      0.0          ax1.set_xlabel('Value')
+   183         1         76.2     76.2      0.0          ax1.set_ylabel('Counts')
+   184         1        710.4    710.4      0.0          ax1.grid(True)
    185                                                   
    186                                                   # 2. 2D map of histogram total counts
-   187         1      37241.8  37241.8      1.9          ax2 = fig.add_subplot(122)
-   188         1       4598.0   4598.0      0.2          total_counts = np.sum(output.histograms, axi
+   187         1      29411.7  29411.7      1.9          ax2 = fig.add_subplot(122)
+   188         1       3259.6   3259.6      0.2          total_counts = np.sum(output.histograms, axi
 s=0)
-   189         1       2501.2   2501.2      0.1          im2 = ax2.imshow(total_counts, cmap='viridis
+   189         1       2373.6   2373.6      0.2          im2 = ax2.imshow(total_counts, cmap='viridis
 ')
-   190         1        362.9    362.9      0.0          ax2.set_title('Histogram Total Counts Map')
-   191         1      49647.0  49647.0      2.6          plt.colorbar(im2, ax=ax2, label='Total Count
+   190         1        305.7    305.7      0.0          ax2.set_title('Histogram Total Counts Map')
+   191         1      41568.7  41568.7      2.8          plt.colorbar(im2, ax=ax2, label='Total Count
 s')
    192                                                   
    193                                                   
-   194         1    1013963.8    1e+06     52.9          plt.tight_layout()
-   195         1     735060.0 735060.0     38.4          plt.savefig(save_dir / 'make_histogram_diagn
+   194         1     741538.8 741538.8     49.1          plt.tight_layout()
+   195         1     640508.0 640508.0     42.4          plt.savefig(save_dir / 'make_histogram_diagn
 ostics.png')
-   196         1         64.7     64.7      0.0          plt.close()
+   196         1         61.4     61.4      0.0          plt.close()
 
-Total time: 2.70116 s
+Total time: 2.61507 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/measure_emd.py
 Function: _calculate_emd_values at line 67
 
@@ -370,20 +432,20 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
     72                                               ) -> np.ndarray:
     73                                                   """Calculate EMD between each pixel's histog
 ram and reference."""
-    74         1          1.4      1.4      0.0          shape = histograms.shape
-    75         1         32.9     32.9      0.0          emd_values = np.zeros((shape[1], shape[2]))
+    74         1          1.5      1.5      0.0          shape = histograms.shape
+    75         1         33.2     33.2      0.0          emd_values = np.zeros((shape[1], shape[2]))
     76                                                   
-    77       196         72.6      0.4      0.0          for i in range(shape[1]):
-    78     31395      14723.1      0.5      0.5              for j in range(shape[2]):
-    79     62400    2644136.4     42.4     97.9                  emd_values[i, j] = wasserstein_dista
+    77       196         80.4      0.4      0.0          for i in range(shape[1]):
+    78     31395      15186.3      0.5      0.6              for j in range(shape[2]):
+    79     62400    2556793.5     41.0     97.8                  emd_values[i, j] = wasserstein_dista
 nce(
-    80     31200      33505.5      1.1      1.2                      histograms[:, i, j],
-    81     31200       8682.9      0.3      0.3                      reference_histogram
+    80     31200      33394.3      1.1      1.3                      histograms[:, i, j],
+    81     31200       9575.5      0.3      0.4                      reference_histogram
     82                                                           )
     83                                                   
-    84         1          0.5      0.5      0.0          return emd_values
+    84         1          0.3      0.3      0.0          return emd_values
 
-Total time: 3.39594 s
+Total time: 1.51669 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/pump_probe.py
 Function: run at line 207
 
@@ -404,92 +466,92 @@ ror propagation.
 signals and uncertainties
    216                                                   """
    217                                                   # Store input data and masks for diagnostics
-   218         1          1.9      1.9      0.0          self.input_data = input_data
-   219         1          2.7      2.7      0.0          self.signal_mask = input_data.masks_output.s
+   218         1          2.1      2.1      0.0          self.input_data = input_data
+   219         1          2.5      2.5      0.0          self.signal_mask = input_data.masks_output.s
 ignal_mask
-   220         1          1.5      1.5      0.0          self.bg_mask = input_data.masks_output.backg
+   220         1          1.4      1.4      0.0          self.bg_mask = input_data.masks_output.backg
 round_mask
    221                                                   
    222                                                   # Group frames by delay
-   223         1    2660577.1    3e+06     78.3          self.stacks_on, self.stacks_off = self._grou
+   223         1     841884.6 841884.6     55.5          self.stacks_on, self.stacks_off = self._grou
 p_by_delay(input_data)
    224                                                   
    225                                                   # Process each delay group
-   226         1          0.9      0.9      0.0          delays = []
-   227         1          0.8      0.8      0.0          signals_on = []
-   228         1          1.1      1.1      0.0          signals_off = []
-   229         1          1.0      1.0      0.0          std_devs_on = []
-   230         1          0.5      0.5      0.0          std_devs_off = []
-   231         1          1.2      1.2      0.0          n_frames = {}
+   226         1          1.0      1.0      0.0          delays = []
+   227         1          1.4      1.4      0.0          signals_on = []
+   228         1          0.7      0.7      0.0          signals_off = []
+   229         1          0.3      0.3      0.0          std_devs_on = []
+   230         1          0.3      0.3      0.0          std_devs_off = []
+   231         1          0.6      0.6      0.0          n_frames = {}
    232                                                   
-   233        32         71.8      2.2      0.0          for delay in sorted(self.stacks_on.keys()):
+   233        32         47.9      1.5      0.0          for delay in sorted(self.stacks_on.keys()):
    234                                                       # Get frame stacks
-   235        31        201.2      6.5      0.0              on_data = self.stacks_on[delay]
-   236        31         85.8      2.8      0.0              off_data = self.stacks_off[delay]
+   235        31         67.5      2.2      0.0              on_data = self.stacks_on[delay]
+   236        31         37.7      1.2      0.0              off_data = self.stacks_off[delay]
    237                                                       
    238                                                       # Store frame counts
-   239        31        128.9      4.2      0.0              n_frames[delay] = (len(on_data.frames), 
+   239        31        116.9      3.8      0.0              n_frames[delay] = (len(on_data.frames), 
 len(off_data.frames))
    240                                                       
    241                                                       # Calculate signals and uncertainties
-   242        62     343647.5   5542.7     10.1              signal_on, bg_on, var_on = self._calcula
+   242        62     314973.6   5080.2     20.8              signal_on, bg_on, var_on = self._calcula
 te_signals(
-   243        31         46.7      1.5      0.0                  on_data.frames, self.signal_mask, se
+   243        31         28.6      0.9      0.0                  on_data.frames, self.signal_mask, se
 lf.bg_mask, on_data.I0
    244                                                       )
    245                                                       
-   246        62     386816.2   6239.0     11.4              signal_off, bg_off, var_off = self._calc
+   246        62     354669.4   5720.5     23.4              signal_off, bg_off, var_off = self._calc
 ulate_signals(
-   247        31         63.8      2.1      0.0                  off_data.frames, self.signal_mask, s
+   247        31         62.8      2.0      0.0                  off_data.frames, self.signal_mask, s
 elf.bg_mask, off_data.I0
    248                                                       )
    249                                                       
    250                                                       # Store results (already normalized by I
 0)
-   251        31         70.0      2.3      0.0              delays.append(delay)
-   252        31         38.5      1.2      0.0              signals_on.append(signal_on - bg_on)
-   253        31         49.8      1.6      0.0              signals_off.append(signal_off - bg_off)
-   254        31        157.0      5.1      0.0              std_devs_on.append(np.sqrt(var_on))
-   255        31         96.4      3.1      0.0              std_devs_off.append(np.sqrt(var_off))
+   251        31         63.3      2.0      0.0              delays.append(delay)
+   252        31         33.7      1.1      0.0              signals_on.append(signal_on - bg_on)
+   253        31         31.5      1.0      0.0              signals_off.append(signal_off - bg_off)
+   254        31        149.8      4.8      0.0              std_devs_on.append(np.sqrt(var_on))
+   255        31         72.9      2.4      0.0              std_devs_off.append(np.sqrt(var_off))
    256                                                   
    257                                                   # Calculate mean I0 values
-   258         2        482.0    241.0      0.0          mean_I0_on = np.mean([
+   258         2        532.0    266.0      0.0          mean_I0_on = np.mean([
    259         1          0.2      0.2      0.0              np.mean(self.stacks_on[delay].I0) for de
 lay in delays
    260                                                   ])
-   261         2        408.0    204.0      0.0          mean_I0_off = np.mean([
+   261         2        411.0    205.5      0.0          mean_I0_off = np.mean([
    262         1          0.3      0.3      0.0              np.mean(self.stacks_off[delay].I0) for d
 elay in delays
    263                                                   ])
    264                                                   
    265                                                   # Convert to arrays
-   266         1          3.8      3.8      0.0          delays = np.array(delays)
-   267         1          5.0      5.0      0.0          signals_on = np.array(signals_on)
-   268         1          3.8      3.8      0.0          signals_off = np.array(signals_off)
-   269         1          4.0      4.0      0.0          std_devs_on = np.array(std_devs_on)
-   270         1          3.8      3.8      0.0          std_devs_off = np.array(std_devs_off)
+   266         1          3.9      3.9      0.0          delays = np.array(delays)
+   267         1          8.7      8.7      0.0          signals_on = np.array(signals_on)
+   268         1          5.9      5.9      0.0          signals_off = np.array(signals_off)
+   269         1          7.4      7.4      0.0          std_devs_on = np.array(std_devs_on)
+   270         1          5.2      5.2      0.0          std_devs_off = np.array(std_devs_off)
    271                                                   
    272                                                   # Calculate p-values comparing on/off signal
 s
-   273         1         12.8     12.8      0.0          z_scores = (signals_on - signals_off) / np.s
+   273         1         23.3     23.3      0.0          z_scores = (signals_on - signals_off) / np.s
 qrt(std_devs_on**2 + std_devs_off**2)
-   274         1        567.8    567.8      0.0          p_values = 2 * (1 - stats.norm.cdf(np.abs(z_
+   274         1        735.7    735.7      0.0          p_values = 2 * (1 - stats.norm.cdf(np.abs(z_
 scores)))
    275                                                   
-   276         2         38.4     19.2      0.0          return PumpProbeAnalysisOutput(
-   277         1          0.2      0.2      0.0              delays=delays,
-   278         1          0.4      0.4      0.0              signals_on=signals_on,
-   279         1          0.5      0.5      0.0              signals_off=signals_off,
+   276         2         74.3     37.1      0.0          return PumpProbeAnalysisOutput(
+   277         1          0.5      0.5      0.0              delays=delays,
+   278         1          0.2      0.2      0.0              signals_on=signals_on,
+   279         1          0.4      0.4      0.0              signals_off=signals_off,
    280         1          0.2      0.2      0.0              std_devs_on=std_devs_on,
-   281         1          0.3      0.3      0.0              std_devs_off=std_devs_off,
-   282         1          0.2      0.2      0.0              p_values=p_values,
-   283         1       2348.3   2348.3      0.1              log_p_values=-np.log10(p_values),
+   281         1          0.2      0.2      0.0              std_devs_off=std_devs_off,
+   282         1          0.3      0.3      0.0              p_values=p_values,
+   283         1       2628.7   2628.7      0.2              log_p_values=-np.log10(p_values),
    284         1          0.8      0.8      0.0              mean_I0_on=mean_I0_on,
-   285         1          0.4      0.4      0.0              mean_I0_off=mean_I0_off,
-   286         1          0.7      0.7      0.0              n_frames_per_delay=n_frames
+   285         1          0.7      0.7      0.0              mean_I0_off=mean_I0_off,
+   286         1          1.4      1.4      0.0              n_frames_per_delay=n_frames
    287                                                   )
 
-Total time: 1.1474 s
+Total time: 1.14676 s
 File: /sdf/data/lcls/ds/xcs/xcsl1008222/results/ohoidn/btx/btx/processing/tasks/pump_probe.py
 Function: plot_diagnostics at line 289
 
@@ -504,7 +566,7 @@ Line #      Hits         Time  Per Hit   % Time  Line Contents
    295                                               ) -> None:
    296                                                   """Generate diagnostic plots with proper inf
 inity handling."""
-   297         1        552.7    552.7      0.0          save_dir.mkdir(parents=True, exist_ok=True)
+   297         1        556.3    556.3      0.0          save_dir.mkdir(parents=True, exist_ok=True)
    298                                                   
    299                                                   # print("\n=== Signal Shape Debug ===")
    300                                                   # print(f"signals_on shape: {output.signals_
@@ -519,87 +581,87 @@ s_per_delay.items():
 {n_off} off")
    306                                                   
    307                                                   # Create four-panel overview figure
-   308         1       1824.4   1824.4      0.2          fig = plt.figure(figsize=(16, 16))
+   308         1       2823.6   2823.6      0.2          fig = plt.figure(figsize=(16, 16))
    309                                                   
-   310         1          1.2      1.2      0.0          if self.input_data is None:
+   310         1          0.7      0.7      0.0          if self.input_data is None:
    311                                                       raise RuntimeError("plot_diagnostics() c
 alled before run()")
    312                                                       
    313                                                   # 1. Time traces with error bars (top left)
-   314         1      35570.6  35570.6      3.1          ax2 = fig.add_subplot(221)
-   315         2       7932.9   3966.4      0.7          ax2.errorbar(output.delays, output.signals_o
+   314         1      35780.2  35780.2      3.1          ax2 = fig.add_subplot(221)
+   315         2      11099.2   5549.6      1.0          ax2.errorbar(output.delays, output.signals_o
 n,
-   316         1          0.6      0.6      0.0                      yerr=output.std_devs_on, fmt='rs
+   316         1          0.7      0.7      0.0                      yerr=output.std_devs_on, fmt='rs
 -',
-   317         1          0.3      0.3      0.0                      label='Laser On', capsize=3)
-   318         2       7324.3   3662.1      0.6          ax2.errorbar(output.delays, output.signals_o
+   317         1          0.4      0.4      0.0                      label='Laser On', capsize=3)
+   318         2       7889.7   3944.9      0.7          ax2.errorbar(output.delays, output.signals_o
 ff,
-   319         1          0.6      0.6      0.0                      yerr=output.std_devs_off, fmt='k
+   319         1          0.9      0.9      0.0                      yerr=output.std_devs_off, fmt='k
 s-',
-   320         1          0.4      0.4      0.0                      label='Laser Off', capsize=3, al
+   320         1          0.3      0.3      0.0                      label='Laser Off', capsize=3, al
 pha=0.5)
-   321         1        107.2    107.2      0.0          ax2.set_xlabel('Time Delay (ps)')
-   322         1         82.5     82.5      0.0          ax2.set_ylabel('Normalized Signal')
-   323         1       8789.2   8789.2      0.8          ax2.legend()
-   324         1        718.1    718.1      0.1          ax2.grid(True)
+   321         1        121.1    121.1      0.0          ax2.set_xlabel('Time Delay (ps)')
+   322         1         79.6     79.6      0.0          ax2.set_ylabel('Normalized Signal')
+   323         1       9405.0   9405.0      0.8          ax2.legend()
+   324         1        756.6    756.6      0.1          ax2.grid(True)
    325                                                   
    326                                                   # 2. Signal and background masks (top right)
-   327         1      32190.7  32190.7      2.8          ax3 = fig.add_subplot(222)
-   328         1         52.8     52.8      0.0          mask_display = np.zeros_like(self.signal_mas
+   327         1      31447.4  31447.4      2.7          ax3 = fig.add_subplot(222)
+   328         1        170.7    170.7      0.0          mask_display = np.zeros_like(self.signal_mas
 k, dtype=float)
-   329         1         32.9     32.9      0.0          mask_display[self.signal_mask] = 1
-   330         1         35.9     35.9      0.0          mask_display[self.bg_mask] = 0.5
-   331         1       1958.0   1958.0      0.2          im3 = ax3.imshow(mask_display, origin='lower
+   329         1         35.2     35.2      0.0          mask_display[self.signal_mask] = 1
+   330         1         40.2     40.2      0.0          mask_display[self.bg_mask] = 0.5
+   331         1       2327.4   2327.4      0.2          im3 = ax3.imshow(mask_display, origin='lower
 ', cmap='viridis')
-   332         1        304.0    304.0      0.0          ax3.set_title('Analysis Masks (Signal=1, Bac
+   332         1        345.2    345.2      0.0          ax3.set_title('Analysis Masks (Signal=1, Bac
 kground=0.5)')
-   333         1      43193.0  43193.0      3.8          plt.colorbar(im3, ax=ax3)
+   333         1      44967.4  44967.4      3.9          plt.colorbar(im3, ax=ax3)
    334                                                   
    335                                                   # 3. Statistical significance (bottom right)
-   336         1      31890.2  31890.2      2.8          ax4 = fig.add_subplot(223)
+   336         1      30509.3  30509.3      2.7          ax4 = fig.add_subplot(223)
    337                                                   
    338                                                   # Convert p-values to log scale with capped 
 infinities
    339         1          0.5      0.5      0.0          max_log_p = 16  # Maximum value to show on p
 lot
-   340         1         21.3     21.3      0.0          log_p_values = np.zeros_like(output.p_values
+   340         1         20.9     20.9      0.0          log_p_values = np.zeros_like(output.p_values
 )
    341                                                   
-   342        32         31.0      1.0      0.0          for i, (delay, p_val) in enumerate(zip(outpu
+   342        32         30.5      1.0      0.0          for i, (delay, p_val) in enumerate(zip(outpu
 t.delays, output.p_values)):
-   343        31         12.0      0.4      0.0              if p_val > 0:
-   344         8         19.9      2.5      0.0                  log_p = -np.log10(p_val)
-   345         8          4.6      0.6      0.0                  log_p_values[i] = log_p
+   343        31         10.5      0.3      0.0              if p_val > 0:
+   344         9         21.1      2.3      0.0                  log_p = -np.log10(p_val)
+   345         9          4.4      0.5      0.0                  log_p_values[i] = log_p
    346                                                       else:
-   347        23         22.0      1.0      0.0                  log_p_values[i] = max_log_p
+   347        22         25.8      1.2      0.0                  log_p_values[i] = max_log_p
    348                                                   
    349                                                   # Create scatter plot with processed values
-   350         2       2769.5   1384.8      0.2          scatter = ax4.scatter(output.delays, log_p_v
+   350         2       2784.3   1392.2      0.2          scatter = ax4.scatter(output.delays, log_p_v
 alues,
    351         1          0.4      0.4      0.0                               color='red', label='-lo
 g(p-value)')
    352                                                   
    353                                                   # Add significance line
-   354         1          1.7      1.7      0.0          sig_level = self.config['pump_probe_analysis
+   354         1          6.1      6.1      0.0          sig_level = self.config['pump_probe_analysis
 ']['significance_level']
-   355         1          5.1      5.1      0.0          sig_line = -np.log10(sig_level)
-   356         2       2487.8   1243.9      0.2          ax4.axhline(y=sig_line, color='k', linestyle
+   355         1          5.2      5.2      0.0          sig_line = -np.log10(sig_level)
+   356         2       2597.6   1298.8      0.2          ax4.axhline(y=sig_line, color='k', linestyle
 ='--',
-   357         1          5.8      5.8      0.0                      label=f'p={sig_level}')
+   357         1          5.6      5.6      0.0                      label=f'p={sig_level}')
    358                                                   
    359                                                   # Set y-axis limits explicitly
-   360         1        270.4    270.4      0.0          ax4.set_ylim(0, max_log_p * 1.1)  # Add 10% 
+   360         1        278.8    278.8      0.0          ax4.set_ylim(0, max_log_p * 1.1)  # Add 10% 
 padding above max
    361                                                   
-   362         1        104.5    104.5      0.0          ax4.set_xlabel('Time Delay (ps)')
-   363         1         79.9     79.9      0.0          ax4.set_ylabel('-log10(P-value)')
-   364         1       3826.0   3826.0      0.3          ax4.legend()
-   365         1        729.6    729.6      0.1          ax4.grid(True)
+   362         1        100.2    100.2      0.0          ax4.set_xlabel('Time Delay (ps)')
+   363         1         79.0     79.0      0.0          ax4.set_ylabel('-log10(P-value)')
+   364         1       3420.5   3420.5      0.3          ax4.legend()
+   365         1        723.6    723.6      0.1          ax4.grid(True)
    366                                                   
-   367         1     290372.8 290372.8     25.3          plt.tight_layout()
-   368         1     674015.8 674015.8     58.7          plt.savefig(save_dir / 'overview_diagnostics
+   367         1     289044.7 289044.7     25.2          plt.tight_layout()
+   368         1     669183.9 669183.9     58.4          plt.savefig(save_dir / 'overview_diagnostics
 .png')
-   369         1         56.1     56.1      0.0          plt.close()
+   369         1         61.9     61.9      0.0          plt.close()
    370                                           
    371                                                   # Plot detailed diagnostics if enabled
    372         1          0.6      0.6      0.0          if detailed_diagnostics:
