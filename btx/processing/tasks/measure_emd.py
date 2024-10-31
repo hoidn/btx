@@ -5,6 +5,12 @@ import matplotlib.pyplot as plt
 from scipy.stats import wasserstein_distance
 import warnings
 
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
+
 from btx.processing.btx_types import MeasureEMDInput, MeasureEMDOutput
 
 class MeasureEMD:
@@ -105,6 +111,7 @@ class MeasureEMD:
         
         return np.array(null_emd_values)
 
+    @profile
     def run(self, input_data: MeasureEMDInput) -> MeasureEMDOutput:
         """Run EMD calculation.
         
