@@ -86,7 +86,7 @@ class PumpProbeAnalysis:
             analysis_config['significance_level'] = 0.05
 
 
-    @profile
+    #@profile
     def _group_by_delay(
         self, 
         input_data: PumpProbeAnalysisInput
@@ -158,7 +158,7 @@ class PumpProbeAnalysis:
         
         return stacks_on, stacks_off
 
-    @profile
+    #@profile
     def _calculate_signals(
         self,
         frames: np.ndarray,
