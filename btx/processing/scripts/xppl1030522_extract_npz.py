@@ -79,7 +79,6 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
         save_path = output_path / f'run{run_number}_extracted.npz'
         
         print(f"Saving data to {save_path}")
-        frames = np.asarray(frames, order = 'F')
         np.savez(
             save_path,
             frames=frames,
