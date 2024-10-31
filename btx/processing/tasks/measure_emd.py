@@ -64,6 +64,7 @@ class MeasureEMD:
         roi_histograms = histograms[:, x1:x2, y1:y2]
         return np.mean(roi_histograms, axis=(1, 2))
         
+    @profile
     def _calculate_emd_values(
         self,
         histograms: np.ndarray,
@@ -111,7 +112,6 @@ class MeasureEMD:
         
         return np.array(null_emd_values)
 
-    @profile
     def run(self, input_data: MeasureEMDInput) -> MeasureEMDOutput:
         """Run EMD calculation.
         
