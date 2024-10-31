@@ -101,7 +101,6 @@ class MakeHistogram:
         
 
     @memoize_subsampled
-    @profile
     def _calculate_histograms(
         self,
         data: np.ndarray,

@@ -1,0 +1,282 @@
+\documentclass{beamer}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{fontawesome}
+\usepackage{tikz}  % Add this
+\usepackage{pgf-pie}  % Add this for pie charts
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    basicstyle=\ttfamily\small,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+
+\title{Differences Between LCLS Dataset Analysis Workflows}
+
+\begin{document}
+
+%\begin{frame}
+%\titlepage
+%\end{frame}
+
+\begin{frame}{Pipeline Runtime Analysis}
+\begin{columns}
+\column{0.6\textwidth}
+\begin{itemize}
+\item Total runtime: 26.91s
+\item Main stages:
+    \begin{itemize}
+    \item \textcolor{red}{LoadData: 11.40s (42.3\%)}
+        \begin{itemize}
+        \item Energy threshold: 11.38s
+        \item Delay binning: 0.02s
+        \end{itemize}
+    \item \textcolor{blue}{MakeHistogram: 11.27s (41.9\%)}
+        \begin{itemize}
+          \item Histogram calculation: 11.27s with JIT compiler (down from $>60s$ unoptimized)
+        \end{itemize}
+    \item \textcolor{green}{Signal Analysis: 2.72s (10.1\%)}
+        \begin{itemize}
+        \item EMD + P-values + Masks: 1.20s
+        \item PumpProbe: 1.52s
+        \end{itemize}
+    \end{itemize}
+\end{itemize}
+
+\column{0.4\textwidth}
+%\begin{tikzpicture}
+%\pie[radius=2]{
+%    42.3/LoadData,
+%    41.9/MakeHistogram,
+%    10.1/Analysis,
+%    5.7/Other
+%}
+%\end{tikzpicture}
+\end{columns}
+
+\vspace{0.3cm}
+\begin{block}{Key Bottlenecks}
+\begin{itemize}
+\item Energy threshold computation in LoadData
+\item Histogram calculation with large frame count (37,301)
+\end{itemize}
+\end{block}
+\end{frame}
+
+\begin{frame}{Data loading differences}
+\begin{itemize}
+  \item Two distinct event selection and delay calculation workflows for different datasets
+\item Key differences in:
+    \begin{itemize}
+    \item HDF5 path structures
+    \item Event classification methods
+    \item Detector mask handling
+    \item Filter parameters
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+\begin{frame}{HDF5 Path Structure - Delay Encoding}
+\textbf{Dataset A: xppx1003221}
+\begin{itemize}
+\item Uses \texttt{enc/lasDelay} combined with timetool position
+\item Additional timing corrections applied
+\end{itemize}
+
+\textbf{Dataset B: xppl1030522}
+\begin{itemize}
+\item Uses \texttt{enc/lasDelay2} directly
+\item Different delay calculation formula
+\end{itemize}
+
+\textbf{Impact:} Different delay calculations affect time binning and resolution
+\end{frame}
+
+\begin{frame}[fragile]{Event Classification}
+\textbf{Dataset A:}
+\begin{lstlisting}[language=Python]
+# HDF5 attributes:
+/evr/code_90             # uint8 array
+/evr/code_91             # uint8 array
+/evr/code_40             # uint8 array
+
+# Processing:
+laser_on = evr.code_90 == 1
+laser_off = evr.code_91 == 1
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Event Classification (cont.)}
+\textbf{Dataset B:}
+\begin{lstlisting}[language=Python]
+# HDF5 attributes:
+/lightStatus/laser       # bool array
+/lightStatus/xray        # bool array
+/lightStatus/valid       # bool array
+
+# Processing:
+laser_on = lightStatus/laser == True
+xray_on = lightStatus/xray == True
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Detector Mask Handling}
+\textbf{Dataset A:}
+\begin{lstlisting}[language=Python]
+# HDF5 attributes:
+/UserDataCfg/jungfrau1M/ROI_0__ROI_0_ROI
+/UserDataCfg/jungfrau1M/mask  
+
+# Processing:
+idx_tile = ROI_0__ROI_0_ROI[0,0]
+mask = jungfrau1M.mask[idx_tile][roi_slice_y, roi_slice_x]
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Detector Mask Handling (cont.)}
+\textbf{Dataset B:}
+\begin{lstlisting}[language=Python]
+# HDF5 attributes:
+/UserDataCfg/jungfrau1M/ROI_0__ROI_0_mask
+
+# Processing:
+roi0_mask = ROI_0__ROI_0_mask[0]
+\end{lstlisting}
+
+\textbf{Impact:} Different approaches to background subtraction and signal isolation
+\end{frame}
+
+\begin{frame}{Filter Parameters}
+\textbf{IPM Position Filters:}
+\begin{itemize}
+  \item \textbf{Dataset A (dynamically calculated):}
+    \begin{itemize}
+    \item X: [-0.25, 0.45]
+    \item Y: [-0.6, 0.8]
+    \end{itemize}
+\item \textbf{Dataset B:(hardcoded in script parameters)}
+    \begin{itemize}
+    \item X: [-0.45, 0.45]
+    \item Y: [-1.6, 0.0]
+    \end{itemize}
+\end{itemize}
+\end{frame}
+
+%\begin{frame}{TimeTool Integration}
+%\begin{columns}
+%\column{0.5\textwidth}
+%\textbf{Dataset A}
+%\begin{itemize}
+%\item Optional usage
+%\item Configurable threshold
+%\item Laser-on events only
+%\end{itemize}
+%
+%\column{0.5\textwidth}
+%\textbf{Dataset B}
+%\begin{itemize}
+%\item Always enabled
+%\item Fixed threshold
+%\item All events
+%\end{itemize}
+%\end{columns}
+%\end{frame}
+
+%\begin{frame}{TimeTool Integration}
+%\begin{columns}
+%\column{0.5\textwidth}
+%\textbf{Dataset A}
+%\begin{itemize}
+%\item Always enabled
+%\item Fixed threshold
+%\item All events
+%\end{itemize}
+%
+%\begin{lstlisting}[language=Python]
+%filters = {
+%    'tt_amp': [0.015, np.inf]
+%}
+%
+%# Applied to all events except 
+%# laser-off for tt specifically
+%if 'tt' not in key:  
+%    laser_off_mask = np.logical_and(
+%        laser_off_mask, 
+%        value_filter)
+%\end{lstlisting}
+%
+%\column{0.5\textwidth}
+%\textbf{Dataset B}
+%\begin{itemize}
+%\item Optional usage
+%\item Configurable threshold
+%\item Laser-on events only
+%\end{itemize}
+%
+%\begin{lstlisting}[language=Python]
+%# Optional timetool filter
+%if use_timetool:
+%    filters['tt_amp'] = [0.0, np.inf]
+%
+%# Only applies to laser-on events
+%if key == 'tt_amp':
+%    laser_on_mask = np.logical_and(
+%        laser_on_mask, 
+%        value_filter)
+%\end{lstlisting}
+%\end{columns}
+%\end{frame}
+
+\begin{frame}{TimeTool Integration}
+\begin{columns}
+\column{0.5\textwidth}
+\textbf{Dataset A}
+\begin{itemize}
+\item Always enabled
+\item Fixed threshold
+\end{itemize}
+
+\texttt{\# Fixed threshold in filters}\\
+\texttt{filters['tt\_amp'] = [0.015, inf]}\\
+\vspace{0.5cm}
+\texttt{\# Skip tt filter for laser-off}\\
+\texttt{if 'tt' not in key:}\\
+\texttt{~~~~laser\_off\_mask = mask and filt}
+
+\column{0.5\textwidth}
+\textbf{Dataset B}
+\begin{itemize}
+\item Optional usage
+\item Configurable threshold
+\end{itemize}
+
+\texttt{\# Optional timetool usage}\\
+\texttt{if use\_timetool:}\\
+\texttt{~~~~filters['tt\_amp'] = [0.0, inf]}\\
+\vspace{0.5cm}
+\texttt{\# Laser-on events only}\\
+\texttt{if key == 'tt\_amp':}\\
+\texttt{~~~~laser\_on\_mask = mask and filt}
+\end{columns}
+\end{frame}
+
+\end{document}
