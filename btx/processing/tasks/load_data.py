@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import numpy as np
 import matplotlib.pyplot as plt
+import numexpr as ne
 
 try:
     from line_profiler import profile
@@ -55,20 +56,29 @@ class LoadData:
         """
         E0, dE, Emin, Emax = self.config['load_data']['energy_filter']
         
-        # Define harmonic threshold bands
-        thresh_1, thresh_2 = E0 - dE, E0 + dE
-        thresh_3, thresh_4 = 2 * E0 - dE, 2 * E0 + dE
-        thresh_5, thresh_6 = 3 * E0 - dE, 3 * E0 + dE
+        # Create masks using numexpr for better performance
+        # Define local variables for numexpr
+        local_dict = {
+            'data': data,
+            'E0': E0,
+            'dE': dE,
+            'Emin': Emin,
+            'Emax': Emax
+        }
         
-        # Create masks for harmonic bands and global range
-        harmonic_mask = ((data >= thresh_1) & (data <= thresh_2)) | \
-                       ((data >= thresh_3) & (data <= thresh_4)) | \
-                       ((data >= thresh_5) & (data <= thresh_6))
-        global_mask = (data > Emin) & (data <= Emax)
+        # Create harmonic mask using a single numexpr evaluation
+        harmonic_mask = ne.evaluate("""
+            (data >= (E0 - dE)) & (data <= (E0 + dE)) |
+            (data >= (2*E0 - dE)) & (data <= (2*E0 + dE)) |
+            (data >= (3*E0 - dE)) & (data <= (3*E0 + dE))
+        """, local_dict=local_dict)
+        
+        # Create global mask
+        global_mask = ne.evaluate("(data > Emin) & (data <= Emax)", local_dict=local_dict)
         
         # Apply both filters
         data_cleaned = data.copy()
-        data_cleaned[~(harmonic_mask)] = 0
+        data_cleaned[~harmonic_mask] = 0
         data[~(harmonic_mask & global_mask)] = 0
         
         return data_cleaned, data
