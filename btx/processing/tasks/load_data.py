@@ -42,7 +42,6 @@ class LoadData:
         """
         self.config = config
         
-    @profile
     def _apply_energy_threshold(self, data: np.ndarray):
         """Apply energy thresholding to the data.
         
@@ -141,6 +140,7 @@ class LoadData:
         
         return binned_delays
 
+    @profile
     def run(self, input_data: LoadDataInput) -> LoadDataOutput:
         """Run the data loading and preprocessing."""
         if input_data.data is not None:
