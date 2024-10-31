@@ -6,6 +6,12 @@ from scipy.ndimage import binary_dilation
 import matplotlib.pyplot as plt
 import warnings
 
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
+
 from btx.processing.btx_types import (
     BuildPumpProbeMasksInput,
     BuildPumpProbeMasksOutput,
@@ -305,6 +311,7 @@ class BuildPumpProbeMasks:
                 RuntimeWarning
             )
 
+    @profile
     def run(self, input_data: BuildPumpProbeMasksInput) -> BuildPumpProbeMasksOutput:
         """Run mask generation."""
         # Validate inputs
