@@ -10,7 +10,7 @@ except ImportError:
     PROFILING = False
 import numpy as np
 import matplotlib.pyplot as plt
-from numba import jit
+from numba import jit, prange
 import functools
 import hashlib
 import random
@@ -24,49 +24,48 @@ class MakeHistogramInput:
     def __init__(self, load_data_output):
         self.load_data_output = load_data_output
 
-class MakeHistogramOutput:
-    def __init__(self, histograms, bin_edges, bin_centers):
-        self.histograms = histograms
-        self.bin_edges = bin_edges
-        self.bin_centers = bin_centers
+from btx.processing.btx_types import MakeHistogramInput, MakeHistogramOutput
 
 def memoize_subsampled(func):
     """Memoize a function by creating a hashable key using deterministically subsampled data."""
     cache = {}
 
     @functools.wraps(func)
-    def wrapper(self, data, *args, **kwargs):
-        shape_str = str(data.shape)
+    def wrapper(self, data, *args, **kwargs):  # Add 'self' as first parameter
+        # Generate a hashable key from a deterministic subsample
+        shape_str = str(data.shape)  # Now data is the actual array
         seed_value = int(hashlib.sha256(shape_str.encode()).hexdigest(), 16) % 10**8
         random.seed(seed_value)
 
-        subsample_size = min(100, data.shape[0])
+        subsample_size = min(100, data.shape[0])  # Limit the subsample size to a maximum of 100
         subsample_indices = random.sample(range(data.shape[0]), subsample_size)
         subsample = data[subsample_indices]
 
         hashable_key = hashlib.sha256(subsample.tobytes()).hexdigest()
 
+        # Check cache
         if hashable_key in cache:
             return cache[hashable_key]
 
-        result = func(self, data, *args, **kwargs)
+        # Calculate the result and store it in the cache
+        result = func(self, data, *args, **kwargs)  # Pass self to the original function
         cache[hashable_key] = result
 
         return result
 
     return wrapper
 
-@jit(nopython=True)
+@jit(nopython=True, parallel=True, fastmath=True)
 def _calculate_histograms_numba(data, bin_boundaries, hist_start_bin, bins, rows, cols):
-    """Numba-optimized histogram calculation."""
+    """Basic parallel histogram calculation."""
     hist_shape = (bins, rows, cols)
     histograms = np.zeros(hist_shape, dtype=np.float64)
     
-    for frame in range(data.shape[0]):
-        frame_data = data[frame]
-        for row in range(rows):
-            for col in range(cols):
-                value = frame_data[row, col]
+    for row in prange(rows):
+        for col in range(cols):
+            pixel_data = data[:, row, col]
+            for frame in range(len(pixel_data)):
+                value = pixel_data[frame]
                 bin_idx = np.searchsorted(bin_boundaries, value)
                 if bin_idx < bins:
                     histograms[bin_idx, row, col] += 1
@@ -76,29 +75,21 @@ def _calculate_histograms_numba(data, bin_boundaries, hist_start_bin, bins, rows
     histograms += 1e-9
     return histograms[hist_start_bin:, :, :]
 
+
 class MakeHistogram:
-    """Generate histograms from XPP data with configurable memory layout.
-    
-    This implementation allows control over memory layout for performance optimization
-    and benchmarking purposes. By default, it uses F-order (column-major) layout for
-    optimal performance, but can be configured to use C-order or preserve input layout.
-    """
+    """Generate histograms from XPP data."""
     
     def __init__(self, config: Dict[str, Any]):
         """Initialize histogram generation task.
         
         Args:
             config: Dictionary containing:
-                make_histogram:
-                    bin_boundaries: Array of bin boundaries
-                    hist_start_bin: Index of first bin to include
-                    force_layout: Memory layout policy (optional)
-                        'f': Force F-order (default)
-                        'c': Force C-order
-                        'preserve': Use input array's layout
+                - make_histogram.bin_boundaries: Array of bin boundaries
+                - make_histogram.hist_start_bin: Index of first bin to include
         """
         self.config = config
         
+        # Set defaults if not provided
         if 'make_histogram' not in self.config:
             self.config['make_histogram'] = {}
         hist_config = self.config['make_histogram']
@@ -107,36 +98,7 @@ class MakeHistogram:
             hist_config['bin_boundaries'] = np.arange(5, 30, 0.2)
         if 'hist_start_bin' not in hist_config:
             hist_config['hist_start_bin'] = 1
-        if 'force_layout' not in hist_config:
-            hist_config['force_layout'] = 'f'  # Default to F-order
-            
-        # Validate layout configuration
-        valid_layouts = {'f', 'c', 'preserve'}
-        layout = hist_config['force_layout'].lower()
-        if layout not in valid_layouts:
-            raise ValueError(f"Invalid force_layout value. Must be one of: {valid_layouts}")
-
-    @profile
-    def ensure_layout(self, data: np.ndarray) -> np.ndarray:
-        """Ensure data has the desired memory layout.
         
-        Args:
-            data: Input numpy array
-            
-        Returns:
-            Array with desired memory layout
-        """
-        layout = self.config['make_histogram']['force_layout'].lower()
-        
-        if layout == 'preserve':
-            return data
-        
-        if layout == 'f' and not data.flags.f_contiguous:
-            return np.asfortranarray(data)
-        elif layout == 'c' and not data.flags.c_contiguous:
-            return np.ascontiguousarray(data)
-            
-        return data
 
     @memoize_subsampled
     @profile
@@ -156,27 +118,17 @@ class MakeHistogram:
         Returns:
             3D array of histograms (bins, rows, cols)
         """
-        # Validate inputs
-        assert isinstance(data, np.ndarray), f"Expected numpy array, got {type(data)}"
-        assert data.ndim == 3, f"Expected 3D array, got shape {data.shape}"
-        assert bin_boundaries.ndim == 1, "Bin boundaries must be 1D array"
-        assert np.all(np.diff(bin_boundaries) > 0), "Bin boundaries must be monotonically increasing"
-        
-        # Apply memory layout policy
-        data = self.ensure_layout(data)
-        
         bins = len(bin_boundaries) - 1
         rows, cols = data.shape[1], data.shape[2]
         
-        return np.asarray(
-                _calculate_histograms_numba(
+        return _calculate_histograms_numba(
             data, 
             bin_boundaries, 
             hist_start_bin,
             bins,
             rows,
             cols
-        ), order = 'C')
+        )
 
     @profile
     def run(self, input_data: MakeHistogramInput) -> MakeHistogramOutput:
@@ -192,8 +144,7 @@ class MakeHistogram:
         bin_boundaries = np.array(hist_config['bin_boundaries'])
         hist_start_bin = hist_config['hist_start_bin']
         
-        # Apply memory layout policy
-        data = self.ensure_layout(input_data.load_data_output.data)
+        data = input_data.load_data_output.data
         
         histograms = self._calculate_histograms(
             data,
@@ -201,8 +152,9 @@ class MakeHistogram:
             hist_start_bin
         )
         
-        bin_edges = bin_boundaries[hist_start_bin:-1]
-        bin_centers = (bin_edges + bin_boundaries[hist_start_bin+1:]) / 2
+        # Calculate bin edges and centers correctly
+        bin_edges = bin_boundaries[hist_start_bin:-1]  # Exclude the last edge
+        bin_centers = (bin_boundaries[hist_start_bin:-1] + bin_boundaries[hist_start_bin+1:]) / 2
         
         return MakeHistogramOutput(
             histograms=histograms,
@@ -220,9 +172,10 @@ class MakeHistogram:
         """
         save_dir.mkdir(parents=True, exist_ok=True)
         
-        fig = plt.figure(figsize=(15, 5))
+        # Create figure with subplots
+        fig = plt.figure(figsize=(12, 5))
         
-        # Mean histogram across all pixels (log scale)
+        # 1. Mean histogram across all pixels (log scale)
         ax1 = fig.add_subplot(121)
         mean_hist = np.mean(output.histograms, axis=(1, 2))
         ax1.semilogy(output.bin_centers, mean_hist, 'b-')
@@ -231,12 +184,13 @@ class MakeHistogram:
         ax1.set_ylabel('Counts')
         ax1.grid(True)
         
-        # 2D map of total counts
+        # 2. 2D map of histogram total counts
         ax2 = fig.add_subplot(122)
         total_counts = np.sum(output.histograms, axis=0)
         im2 = ax2.imshow(total_counts, cmap='viridis')
-        ax2.set_title('Total Counts Map')
+        ax2.set_title('Histogram Total Counts Map')
         plt.colorbar(im2, ax=ax2, label='Total Counts')
+        
         
         plt.tight_layout()
         plt.savefig(save_dir / 'make_histogram_diagnostics.png')

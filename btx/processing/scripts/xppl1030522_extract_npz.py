@@ -79,6 +79,7 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
         save_path = output_path / f'run{run_number}_extracted.npz'
         
         print(f"Saving data to {save_path}")
+        frames = np.asarray(frames, order = 'F')
         np.savez(
             save_path,
             frames=frames,
@@ -93,6 +94,7 @@ def extract_data_from_h5(filename: str, output_dir: str) -> None:
         print("Extraction complete!")
         return save_path
 
-filename = "xppl1030522_Run0190.h5"
+filename = "/sdf/data/lcls/ds/xpp/xppl1030522/hdf5/smalldata/xppl1030522_Run0190.h5"
+
 output_dir = "processed_data"
 extract_data_from_h5(filename, output_dir)
