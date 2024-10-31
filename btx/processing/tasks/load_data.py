@@ -3,6 +3,12 @@ from typing import Dict, Any, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
+
 from btx.processing.btx_types import LoadDataInput, LoadDataOutput
 
 def validate_delay_binning(delays: np.ndarray, time_bin: float) -> bool:
@@ -119,6 +125,7 @@ class LoadData:
         
         return binned_delays
 
+    @profile
     def run(self, input_data: LoadDataInput) -> LoadDataOutput:
         """Run the data loading and preprocessing."""
         if input_data.data is not None:
