@@ -4,6 +4,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import warnings
 
+try:
+    from line_profiler import profile
+except ImportError:
+    def profile(func):
+        return func
+
 from btx.processing.btx_types import CalculatePValuesInput, CalculatePValuesOutput
 
 class CalculatePValues:
@@ -55,6 +61,7 @@ class CalculatePValues:
                 
         return p_values
 
+    @profile
     def run(self, input_data: CalculatePValuesInput) -> CalculatePValuesOutput:
         """Run p-value calculation.
         
