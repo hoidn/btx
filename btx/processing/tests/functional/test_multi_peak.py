@@ -157,6 +157,9 @@ def plot_synthetic_data_diagnostics(
 
 def test_synthetic_data_generation():
     """Test the synthetic data generation with multiple peaks."""
+    # Set parameters consistently
+    base_counts = 100.0
+
     # Define test peaks
     peaks = [
         GaussianPeak(center=(30, 30), sigma=8.0, amplitude=2.0),    # Large peak
@@ -167,7 +170,7 @@ def test_synthetic_data_generation():
     # Generate data
     frames, histograms, lambda_map, true_masks = generate_multi_peak_data(
         peaks=peaks,
-        base_counts=100.0,
+        base_counts=base_counts,  # Use the defined parameter
         num_frames=1000,
         seed=42
     )
