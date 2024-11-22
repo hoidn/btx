@@ -55,7 +55,48 @@ def test_multi_peak_mask_generation():
             hist = histograms[:, i, j]
             chi2_stat = np.sum((hist - background_hist)**2 / (background_hist + 1e-10))
             p_values[i, j] = 1 - np.exp(-chi2_stat/2)  # Approximate p-value
+
+    # Add p-value calculation debugging
+    print("\nP-value Statistics:")
+    print(f"Range: {p_values.min():.2e} to {p_values.max():.2e}")
+    print(f"Mean: {p_values.mean():.2e}")
+    print(f"Median: {np.median(p_values):.2e}")
     
+    # Visualize p-values
+    fig, axes = plt.subplots(2, 2, figsize=(15, 15))
+    fig.suptitle('P-value Debugging')
+    
+    # 1. Lambda map (true signal)
+    im0 = axes[0, 0].imshow(lambda_map)
+    axes[0, 0].set_title('True λ Map')
+    plt.colorbar(im0, ax=axes[0, 0])
+    
+    # 2. P-value map
+    im1 = axes[0, 1].imshow(p_values)
+    axes[0, 1].set_title('P-values')
+    plt.colorbar(im1, ax=axes[0, 1])
+    
+    # 3. Log p-value map
+    log_p = -np.log10(p_values + 1e-20)  # Add small constant to avoid log(0)
+    im2 = axes[1, 0].imshow(log_p)
+    axes[1, 0].set_title('-log10(P-values)')
+    plt.colorbar(im2, ax=axes[1, 0])
+    
+    # 4. Significant pixels mask
+    significant = p_values < 0.05
+    im3 = axes[1, 1].imshow(significant)
+    axes[1, 1].set_title('Significant Pixels (p < 0.05)')
+    plt.colorbar(im3, ax=axes[1, 1])
+    
+    plt.savefig(save_dir / 'pvalue_debug.png')
+    plt.close()
+
+    # Print cluster identification debug info
+    print("\nCluster Identification Debug:")
+    significant_count = np.sum(significant)
+    print(f"Number of significant pixels: {significant_count}")
+    print(f"Background ROI significant pixels: {np.sum(significant[0:20, 0:20])}")
+
     # Create input data structures
     histogram_output = MakeHistogramOutput(
         histograms=histograms,
