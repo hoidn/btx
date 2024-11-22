@@ -30,7 +30,8 @@ def generate_multi_peak_data(
     num_histogram_bins: int = 50,
     histogram_range: Tuple[float, float] = (0, 300),
     background_roi: Optional[Tuple[int, int, int, int]] = None,
-    seed: int = 42
+    seed: int = 42,
+    save_total_counts: Optional[Path] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, List[np.ndarray]]:
     """
     Generate synthetic data with multiple 2D Gaussian peaks and Poisson statistics.
@@ -45,6 +46,7 @@ def generate_multi_peak_data(
         histogram_range: (min, max) for histogram binning
         background_roi: (x1, x2, y1, y2) for background ROI
         seed: Random seed for reproducibility
+        save_total_counts: Optional path to save total counts image
         
     Returns:
         frames: Array of shape (num_frames, rows, cols)
@@ -78,6 +80,16 @@ def generate_multi_peak_data(
         for j in range(cols):
             hist, _ = np.histogram(frames[:, i, j], bins=bin_edges)
             histograms[:, i, j] = hist
+            
+    # Save total counts image if requested
+    if save_total_counts is not None:
+        total_counts = frames.sum(axis=0)
+        plt.figure(figsize=(8, 8))
+        plt.imshow(total_counts)
+        plt.colorbar(label='Total Counts')
+        plt.title(f'Total Counts Over {num_frames} Frames')
+        plt.savefig(save_total_counts)
+        plt.close()
             
     # Generate ground truth masks for each peak
     true_masks = []
@@ -172,7 +184,8 @@ def test_synthetic_data_generation():
         peaks=peaks,
         base_counts=base_counts,  # Use the defined parameter
         num_frames=1000,
-        seed=42
+        seed=42,
+        save_total_counts=save_dir / 'total_counts.png'
     )
     
     # Basic shape checks
