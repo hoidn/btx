@@ -139,8 +139,6 @@ def test_multi_peak_mask_generation():
     mask_builder.plot_diagnostics(output, save_dir)
     
     # Add comparison plot of true vs found masks
-    import matplotlib.pyplot as plt
-    
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
     fig.suptitle('True vs Found Masks Comparison')
     
