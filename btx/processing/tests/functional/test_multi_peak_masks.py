@@ -1,5 +1,6 @@
 # test_multi_peak_masks.py
 import numpy as np
+import matplotlib.pyplot as plt
 from pathlib import Path
 from btx.processing.tests.functional.test_multi_peak import (
     GaussianPeak, 
