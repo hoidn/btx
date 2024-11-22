@@ -169,6 +169,10 @@ def plot_synthetic_data_diagnostics(
 
 def test_synthetic_data_generation():
     """Test the synthetic data generation with multiple peaks."""
+    # Set up output directory
+    save_dir = Path(__file__).parent.parent.parent / 'temp' / 'diagnostic_plots' / 'synthetic_data'
+    save_dir.mkdir(parents=True, exist_ok=True)
+    
     # Set parameters consistently
     base_counts = 100.0
 
@@ -220,7 +224,6 @@ def test_synthetic_data_generation():
         "Masks not in descending size order"
     
     # Generate diagnostic plots
-    save_dir = Path(__file__).parent.parent.parent / 'temp' / 'diagnostic_plots' / 'synthetic_data'
     plot_synthetic_data_diagnostics(frames, histograms, lambda_map, true_masks, save_dir)
 
 if __name__ == '__main__':
