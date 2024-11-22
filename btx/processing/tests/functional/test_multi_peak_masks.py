@@ -45,17 +45,41 @@ def test_multi_peak_mask_generation():
         'synthetic_data.png'
     )
     
-    # Calculate p-values using chi-squared test
-    # (This is a simple example - you might want to use your actual p-value calculation)
+    # Calculate p-values using likelihood ratio test for Poisson data
     p_values = np.zeros((100, 100))
     background_hist = histograms[:, :20, :20].mean(axis=(1,2))  # Use background ROI
     
+    # Function to calculate likelihood ratio statistic for Poisson data
+    def poisson_likelihood_ratio(observed, expected):
+        """Calculate likelihood ratio statistic for Poisson data.
+        
+        G = 2 * sum(O_i * ln(O_i/E_i) - (O_i - E_i))
+        where O_i are observed counts and E_i are expected counts.
+        """
+        # Handle zeros in observed data
+        mask = observed > 0
+        G = np.zeros_like(observed, dtype=float)
+        G[mask] = observed[mask] * np.log(observed[mask]/expected[mask])
+        return 2 * (np.sum(G) - np.sum(observed - expected))
+
     for i in range(100):
         for j in range(100):
-            # Simple chi-squared test between each pixel's histogram and background
             hist = histograms[:, i, j]
-            chi2_stat = np.sum((hist - background_hist)**2 / (background_hist + 1e-10))
-            p_values[i, j] = 1 - np.exp(-chi2_stat/2)  # Approximate p-value
+            
+            # Scale background to match total counts
+            scale = np.sum(hist) / np.sum(background_hist)
+            expected = background_hist * scale
+            
+            # Calculate likelihood ratio statistic
+            G = poisson_likelihood_ratio(hist, expected)
+            
+            # Get p-value from chi-squared distribution
+            # Degrees of freedom = number of bins - 1 (for scaling)
+            dof = np.sum((hist > 0) | (expected > 0)) - 1
+            if dof > 0:  # Only calculate if we have enough data
+                p_values[i, j] = stats.chi2.sf(G, dof)
+            else:
+                p_values[i, j] = 1.0
 
     # Add p-value calculation debugging
     print("\nP-value Statistics:")
