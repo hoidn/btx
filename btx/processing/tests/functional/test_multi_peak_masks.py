@@ -2,6 +2,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
+from scipy import stats
 from btx.processing.tests.functional.test_multi_peak import (
     GaussianPeak, 
     generate_multi_peak_data,
