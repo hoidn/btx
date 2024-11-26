@@ -85,19 +85,19 @@ class CalculatePValues:
         """Check uniformity of p-values within background ROI."""
         # Extract ROI p-values
         x1, x2, y1, y2 = roi_coords
-        roi_p_values = p_values[y1:y2, x1:x2].ravel()
-        n_pixels = len(roi_p_values)
+        bg_p_values = p_values[y1:y2, x1:x2].ravel()
+        n_pixels = len(bg_p_values)
         
         # Basic statistics
-        mean_p = np.mean(roi_p_values)
-        median_p = np.median(roi_p_values)
-        std_p = np.std(roi_p_values)
+        mean_p = np.mean(bg_p_values)
+        median_p = np.median(bg_p_values)
+        std_p = np.std(bg_p_values)
         
         # Kolmogorov-Smirnov test against uniform distribution
-        ks_stat, ks_pval = stats.kstest(roi_p_values, 'uniform')
+        ks_stat, ks_pval = stats.kstest(bg_p_values, 'uniform')
         
         # Anderson-Darling test - transform uniform to normal first
-        transformed_data = stats.norm.ppf(roi_p_values)
+        transformed_data = stats.norm.ppf(bg_p_values)
         transformed_data = transformed_data[~np.isnan(transformed_data)]  # Remove any NaNs from 0/1
         ad_stat, ad_crit, ad_sig = stats.anderson(transformed_data, 'norm')
         
