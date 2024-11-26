@@ -96,8 +96,10 @@ class CalculatePValues:
         # Kolmogorov-Smirnov test against uniform distribution
         ks_stat, ks_pval = stats.kstest(roi_p_values, 'uniform')
         
-        # Anderson-Darling test against uniform distribution
-        ad_stat, ad_crit, ad_sig = stats.anderson(roi_p_values, 'uniform')
+        # Anderson-Darling test - transform uniform to normal first
+        transformed_data = stats.norm.ppf(roi_p_values)
+        transformed_data = transformed_data[~np.isnan(transformed_data)]  # Remove any NaNs from 0/1
+        ad_stat, ad_crit, ad_sig = stats.anderson(transformed_data, 'norm')
         
         # Log results
         logger.info("\n=== Background ROI P-value Uniformity Check ===")
@@ -112,9 +114,11 @@ class CalculatePValues:
         logger.info(f"    - Statistic: {ks_stat:.3f}")
         logger.info(f"    - P-value: {ks_pval:.3e}")
         logger.info(f"  Anderson-Darling test:")
-        logger.info(f"    - Statistic: {ad_stat:.3f}")
-        logger.info(f"    - Critical values: {ad_crit}")
+        logger.info(f"    - Statistic: {ad_stat:.3f} (after normal transform)")
+        logger.info(f"    - Critical values: {ad_crit} (for normal distribution)")
         logger.info(f"    - Significance levels: {ad_sig}")
+        logger.info(f"    - Test interpretation: values greater than critical value ")
+        logger.info(f"      reject null hypothesis at corresponding significance level")
         
         # Issue warnings for significant deviations
         if ks_pval < 0.05:
