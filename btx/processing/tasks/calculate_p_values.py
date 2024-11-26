@@ -1,8 +1,20 @@
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, List
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy import stats
 import warnings
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('calculate_pvalues.log'),
+        logging.NullHandler()  # Prevents logging to console
+    ]
+)
+logger = logging.getLogger('CalculatePValues')
 
 try:
     from line_profiler import profile
@@ -21,14 +33,18 @@ class CalculatePValues:
         Args:
             config: Dictionary containing:
                 - calculate_pvalues.significance_threshold: P-value threshold (default: 0.05)
+                - setup.background_roi_coords: [x1, x2, y1, y2]
         """
         self.config = config
         
-        # Set defaults
         if 'calculate_pvalues' not in self.config:
             self.config['calculate_pvalues'] = {}
         if 'significance_threshold' not in self.config['calculate_pvalues']:
             self.config['calculate_pvalues']['significance_threshold'] = 0.05
+            
+        # Validate config has necessary ROI coordinates
+        if 'setup' not in self.config or 'background_roi_coords' not in self.config['setup']:
+            raise ValueError("Configuration must include setup.background_roi_coords")
 
     def _calculate_p_values(
         self,
@@ -60,6 +76,74 @@ class CalculatePValues:
                 p_values[i, j] = p_value
                 
         return p_values
+
+    def _check_background_uniformity(
+        self,
+        p_values: np.ndarray,
+        roi_coords: List[int]
+    ) -> None:
+        """Check uniformity of p-values within background ROI."""
+        # Extract ROI p-values
+        x1, x2, y1, y2 = roi_coords
+        roi_p_values = p_values[x1:x2, y1:y2].ravel()
+        n_pixels = len(roi_p_values)
+        
+        # Basic statistics
+        mean_p = np.mean(roi_p_values)
+        median_p = np.median(roi_p_values)
+        std_p = np.std(roi_p_values)
+        
+        # Kolmogorov-Smirnov test against uniform distribution
+        ks_stat, ks_pval = stats.kstest(roi_p_values, 'uniform')
+        
+        # Anderson-Darling test against uniform distribution
+        ad_stat, ad_crit, ad_sig = stats.anderson(roi_p_values, 'uniform')
+        
+        # Log results
+        logger.info("\n=== Background ROI P-value Uniformity Check ===")
+        logger.info(f"ROI coordinates: {roi_coords}")
+        logger.info(f"Number of ROI pixels: {n_pixels}")
+        logger.info("\nBasic Statistics:")
+        logger.info(f"  - Mean p-value: {mean_p:.3f} (expected 0.5)")
+        logger.info(f"  - Median p-value: {median_p:.3f} (expected 0.5)")
+        logger.info(f"  - Standard deviation: {std_p:.3f} (expected {np.sqrt(1/12):.3f})")
+        logger.info("\nUniformity Tests:")
+        logger.info(f"  Kolmogorov-Smirnov test:")
+        logger.info(f"    - Statistic: {ks_stat:.3f}")
+        logger.info(f"    - P-value: {ks_pval:.3e}")
+        logger.info(f"  Anderson-Darling test:")
+        logger.info(f"    - Statistic: {ad_stat:.3f}")
+        logger.info(f"    - Critical values: {ad_crit}")
+        logger.info(f"    - Significance levels: {ad_sig}")
+        
+        # Issue warnings for significant deviations
+        if ks_pval < 0.05:
+            msg = (
+                f"Background ROI p-values significantly deviate from uniform distribution "
+                f"(KS test p={ks_pval:.2e}). This suggests the background may not be IID."
+            )
+            warnings.warn(msg, RuntimeWarning)
+            logger.warning(msg)
+        
+        # Check for severe deviation in mean/median
+        expected_std = np.sqrt(1/12)  # Standard deviation of uniform[0,1]
+        mean_zscore = abs(mean_p - 0.5) / (expected_std / np.sqrt(n_pixels))
+        if mean_zscore > 3:
+            msg = (
+                f"Background ROI mean p-value ({mean_p:.3f}) deviates significantly "
+                f"from expected 0.5 (z-score = {mean_zscore:.1f})"
+            )
+            warnings.warn(msg, RuntimeWarning)
+            logger.warning(msg)
+        
+        # Check for unusually small variance
+        if std_p < expected_std * 0.5:  # Much smaller than expected
+            msg = (
+                f"Background ROI p-values show unusually small variance ({std_p:.3f} vs "
+                f"expected {expected_std:.3f}). This may indicate over-smoothing."
+            )
+            warnings.warn(msg, RuntimeWarning)
+            logger.warning(msg)
 
     @profile
     def run(self, input_data: CalculatePValuesInput) -> CalculatePValuesOutput:
