@@ -85,7 +85,7 @@ class CalculatePValues:
         """Check uniformity of p-values within background ROI."""
         # Extract ROI p-values
         x1, x2, y1, y2 = roi_coords
-        roi_p_values = p_values[x1:x2, y1:y2].ravel()
+        roi_p_values = p_values[y1:y2, x1:x2].ravel()
         n_pixels = len(roi_p_values)
         
         # Basic statistics
@@ -222,7 +222,7 @@ class CalculatePValues:
         print(f"Full image shape: {output.p_values.shape}")
         print(f"ROI coords: {roi_coords}")
         print(f"ROI shape: {output.p_values[x1:x2, y1:y2].shape}")
-        bg_p_values = output.p_values[x1:x2, y1:y2].ravel()
+        bg_p_values = output.p_values[y1:y2, x1:x2].ravel()
         print(f"Number of pixels - full: {output.p_values.size}, ROI: {bg_p_values.size}")
         ax3.hist(bg_p_values, bins=50, density=True, label='Background ROI', alpha=0.5, color='orange')
 
