@@ -177,6 +177,10 @@ class CalculatePValues:
         print(f"Found {n_significant} significant pixels "
               f"(p < {threshold:.3f}, {n_significant/p_values.size:.1%} of total)")
         
+        # Check background uniformity
+        roi_coords = self.config['setup']['background_roi_coords']
+        self._check_background_uniformity(p_values, roi_coords)
+        
         return CalculatePValuesOutput(
             p_values=p_values,
             log_p_values=log_p_values,
