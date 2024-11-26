@@ -219,7 +219,11 @@ class CalculatePValues:
         # Add background ROI distribution
         roi_coords = self.config['setup']['background_roi_coords']
         x1, x2, y1, y2 = roi_coords
+        print(f"Full image shape: {output.p_values.shape}")
+        print(f"ROI coords: {roi_coords}")
+        print(f"ROI shape: {output.p_values[x1:x2, y1:y2].shape}")
         bg_p_values = output.p_values[x1:x2, y1:y2].ravel()
+        print(f"Number of pixels - full: {output.p_values.size}, ROI: {bg_p_values.size}")
         ax3.hist(bg_p_values, bins=50, density=True, label='Background ROI', alpha=0.5, color='orange')
 
         ax3.axvline(
