@@ -213,7 +213,15 @@ class CalculatePValues:
         
         # 3. P-value histogram
         ax3 = fig.add_subplot(223)
-        ax3.hist(output.p_values.ravel(), bins=50, density=True)
+        # Plot full distribution
+        ax3.hist(output.p_values.ravel(), bins=50, density=True, label='All pixels', alpha=1.0)
+
+        # Add background ROI distribution
+        roi_coords = self.config['setup']['background_roi_coords']
+        x1, x2, y1, y2 = roi_coords
+        bg_p_values = output.p_values[x1:x2, y1:y2].ravel()
+        ax3.hist(bg_p_values, bins=50, density=True, label='Background ROI', alpha=0.5, color='orange')
+
         ax3.axvline(
             output.significance_threshold,
             color='r',
