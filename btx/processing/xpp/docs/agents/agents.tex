@@ -1,0 +1,85 @@
+\documentclass{beamer}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+
+\usepackage{fancyvrb}
+\usepackage{xcolor}
+
+% Define colors
+\definecolor{lightgray}{rgb}{0.95,0.95,0.95}
+
+% Title info
+\title{Enhancing BTX Analysis Tools}
+\subtitle{Adding Intelligent Analysis Guidance}
+\author{}
+\date{}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}{The Challenge}
+    BTX provides automatic analysis, but users still need to:
+    \begin{itemize}
+        \item Interpret diagnostic plots and metrics
+        \item Choose appropriate analysis parameters
+        \item Debug unexpected results
+        \item Make analysis decisions in real-time
+    \end{itemize}
+    \vspace{0.3cm}
+    Expert knowledge needed to guide automatic analysis
+\end{frame}
+
+\begin{frame}[fragile]{Example: Automated Analysis Guidance}
+    Analysis agent provides feedback on automatic pipeline results:
+    
+    \vspace{0.3cm}
+    \begin{Verbatim}[fontsize=\tiny,frame=single,baselinestretch=0.8]
+User: The pump-probe curve for the current run looks weird. What might be wrong?
+
+Response: Based on the p-value uniformity check results, the designated 
+background ROI [80, 95, 5, 45] appears to contain signal when it should not. 
+This is evidenced by:
+
+ 1 Mean p-value of 0.394 (should be 0.5)
+ 2 Highly significant KS test (p=6.496e-17)
+ 3 Large z-score deviation (9.0)
+
+This contaminated background ROI would affect the null distribution calculation, 
+which in turn would distort the pump-probe curve. The solution would be to 
+select a different background ROI location that shows proper uniformity in its 
+p-values.
+    \end{Verbatim}
+\end{frame}
+
+\begin{frame}{Path Forward}
+    \begin{enumerate}
+        \item Analysis Assistant Agent
+        \begin{itemize}
+            \item Monitors BTX pipeline metrics in real-time
+            \item Interprets diagnostic results
+            \item Suggests parameter adjustments
+            \item Validates configuration changes
+        \end{itemize}
+        
+        \item Key Benefits
+        \begin{itemize}
+            \item Makes pipeline diagnostics more accessible
+            \item Provides expert-level guidance
+            \item Helps users learn analysis methods
+            \item Accelerates problem solving
+        \end{itemize}
+        
+        \item Development Path
+        \begin{itemize}
+            \item Start: ROI validation assistant
+            \item Expand: Full diagnostic monitoring
+            \item Goal: Interactive analysis guidance
+        \end{itemize}
+    \end{enumerate}
+\end{frame}
+
+\end{document}
