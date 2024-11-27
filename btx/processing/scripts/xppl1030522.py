@@ -65,7 +65,8 @@ config = {
     'setup': {
         'run': 190,
         'exp': 'xppl1030522',
-        'background_roi_coords': [0, 15, 0, 40]
+        'background_roi_coords': [80, 95, 5, 45]
+        #'background_roi_coords': [0, 15, 0, 40]
     },
     'load_data': {
         'roi': (130, 290, 95, 340), 
@@ -86,7 +87,8 @@ config = {
     },
     'generate_masks': {
         'threshold': 0.05,
-        'bg_mask_mult': 2.0,
+        #'bg_mask_mult': 2.0,
+        'bg_mask_mult': 1.0,
         'bg_mask_thickness': 5
     },
     'pump_probe_analysis': {
