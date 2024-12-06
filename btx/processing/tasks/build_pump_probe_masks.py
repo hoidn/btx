@@ -120,7 +120,7 @@ class BuildPumpProbeMasks:
         Returns:
             Tuple of (labeled array, ROI cluster mask)
         """
-        porous_pixels = p_values > threshold
+        porous_pixels = p_values < threshold
         labeled_array, _ = ndimage.label(porous_pixels)
         seed_x = (roi_x_start + roi_x_end) // 2
         seed_y = (roi_y_start + roi_y_end) // 2
